@@ -26,7 +26,7 @@ pub struct NormTimeDelta( pub(super) i64 );
 
 impl NormTimeDelta {
 	/// Creates a new `NormTimeDelta` that is zero.
-	const ZERO: Self = Self( 0 );
+	pub const ZERO: Self = Self( 0 );
 
 	/// Creates a new `NormTimeDelta` that has a duration of `seconds`.
 	pub fn new_seconds( seconds: i64 ) -> Self {
@@ -80,6 +80,114 @@ impl Sum for NormTimeDelta {
 }
 
 
+#[cfg( feature = "serde" )]
+mod normtime_serde {
+	use super::NormTimeDelta;
+
+	use std::fmt;
+
+	use serde;
+
+	impl serde::Serialize for NormTimeDelta {
+		fn serialize<S>( &self, serializer: S ) -> Result<S::Ok, S::Error>
+		where
+			S: serde::Serializer,
+		{
+			struct FormatWrapped<'a, D: 'a> {
+				inner: &'a D,
+			}
+
+			impl<'a, D: fmt::Debug> fmt::Display for FormatWrapped<'a, D> {
+				fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
+					self.inner.fmt( f )
+				}
+			}
+
+			serializer.serialize_i64( ( *self ).0 )
+		}
+	}
+
+	struct NormTimeDeltaVisitor;
+
+	impl<'de> serde::de::Visitor<'de> for NormTimeDeltaVisitor {
+		type Value = NormTimeDelta;
+
+		fn expecting( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+			formatter.write_str( "an integer between -2^63 and 2^63" )
+		}
+
+		fn visit_i8<E>( self, value: i8 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value as i64 ) )
+		}
+
+		fn visit_i16<E>( self, value: i16 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value as i64 ) )
+		}
+
+		fn visit_i32<E>( self, value: i32 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value as i64 ) )
+		}
+
+		fn visit_i64<E>( self, value: i64 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value ) )
+		}
+
+		fn visit_u8<E>( self, value: u8 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value as i64 ) )
+		}
+
+		fn visit_u16<E>( self, value: u16 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value as i64 ) )
+		}
+
+		fn visit_u32<E>( self, value: u32 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			Ok( NormTimeDelta::new_seconds( value as i64 ) )
+		}
+
+		fn visit_u64<E>( self, value: u64 ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			if value <= i64::MAX as u64 {
+				return Ok( NormTimeDelta::new_seconds( value as i64 ) );
+			} else {
+				return Err( E::custom( format!( "u64 out of range: {}", value ) ) );
+			}
+		}
+	}
+
+	impl<'de> serde::Deserialize<'de> for NormTimeDelta {
+		fn deserialize<D>( deserializer: D ) -> Result<Self, D::Error>
+		where
+			D: serde::Deserializer<'de>,
+		{
+			deserializer.deserialize_i64( NormTimeDeltaVisitor )
+		}
+	}
+}
+
+
 
 
 //=============================================================================
@@ -89,6 +197,8 @@ impl Sum for NormTimeDelta {
 #[cfg( test )]
 mod tests {
 	use super::*;
+
+	use serde_test::{Token, assert_tokens};
 
 	#[test]
 	fn create_normtimedelta() {
@@ -124,5 +234,19 @@ mod tests {
 		].into_iter().sum();
 
 		assert_eq!( accumulated, NormTimeDelta::new_seconds( 30 ) );
+	}
+
+	#[test]
+	#[cfg( feature = "serde" )]
+	fn test_serialize_deserilaize() {
+		assert_tokens(
+			&NormTimeDelta::new_seconds( 10 ),
+			&[ Token::I64( 10 ), ]
+		);
+
+		assert_tokens(
+			&NormTimeDelta::new_years( 10 ),
+			&[ Token::I64( 10 * DUR_NORMYEAR ), ]
+		);
 	}
 }

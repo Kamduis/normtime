@@ -290,6 +290,61 @@ impl FromStr for NormTime {
 }
 
 
+#[cfg( feature = "serde" )]
+mod normtime_serde {
+	use super::NormTime;
+
+	use std::fmt;
+
+	use serde;
+
+	impl serde::Serialize for NormTime {
+		fn serialize<S>( &self, serializer: S ) -> Result<S::Ok, S::Error>
+		where
+			S: serde::Serializer,
+		{
+			struct FormatWrapped<'a, D: 'a> {
+				inner: &'a D,
+			}
+
+			impl<'a, D: fmt::Debug> fmt::Display for FormatWrapped<'a, D> {
+				fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
+					self.inner.fmt( f )
+				}
+			}
+
+			serializer.collect_str( &FormatWrapped { inner: &self } )
+		}
+	}
+
+	struct NormTimeVisitor;
+
+	impl<'de> serde::de::Visitor<'de> for NormTimeVisitor {
+		type Value = NormTime;
+
+		fn expecting( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
+			formatter.write_str( "a formatted date string" )
+		}
+
+		fn visit_str<E>( self, value: &str ) -> Result<Self::Value, E>
+		where
+			E: serde::de::Error,
+		{
+			value.parse().map_err( E::custom )
+		}
+	}
+
+	impl<'de> serde::Deserialize<'de> for NormTime {
+		fn deserialize<D>( deserializer: D ) -> Result<Self, D::Error>
+		where
+			D: serde::Deserializer<'de>,
+		{
+			deserializer.deserialize_str( NormTimeVisitor )
+		}
+	}
+}
+
+
 
 
 //=============================================================================
@@ -299,6 +354,8 @@ impl FromStr for NormTime {
 #[cfg( test )]
 mod tests {
 	use super::*;
+
+	use serde_test::{Token, assert_tokens};
 
 	#[test]
 	fn create_normtime() {
@@ -317,6 +374,21 @@ mod tests {
 		assert_eq!(
 			NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap() ),
 			NormTime::from_ymd_opt( 0, 0, 0 ).unwrap()
+		);
+	}
+
+	#[test]
+	#[cfg( feature = "serde" )]
+	fn test_serialize_deserilaize() {
+		// Test that a value serializes to a particular sequence of method calls or deserializes from the sequence of method calls.
+		assert_tokens(
+			&NormTime::from_ymd_opt( 0, 0, 0 ).unwrap(),
+			&[ Token::Str( "0000-00-00N00:00:00" ), ]
+		);
+
+		assert_tokens(
+			&NormTime::from_ymd_opt( 12345, 6, 7 ).unwrap().and_hms( 8, 9, 10 ),
+			&[ Token::Str( "12345-06-07N08:09:10" ), ]
 		);
 	}
 }
