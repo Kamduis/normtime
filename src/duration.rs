@@ -75,6 +75,21 @@ impl NormTimeDelta {
 	pub fn seconds( &self ) -> i64 {
 		self.0
 	}
+
+	/// Returns the duration of `self` in normyears.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ).years(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 60_000_000 ).years(), 2 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 89_000_000 ).years(), 2 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 90_000_000 ).years(), 3 );
+	/// ```
+	pub fn years( &self ) -> i64 {
+		self.0 / DUR_NORMYEAR
+	}
 }
 
 /// Adding two `NormTimeDelta` together returns the sum of the duration of both.
