@@ -25,35 +25,70 @@ use crate::{DUR_NORMDAY, DUR_NORMYEAR};
 pub struct NormTimeDelta( pub(super) i64 );
 
 impl NormTimeDelta {
-	/// Creates a new `NormTimeDelta` that is zero.
+	/// Creates a new `NormTimeDelta` that has a duration of zero seconds.
 	pub const ZERO: Self = Self( 0 );
 
 	/// Creates a new `NormTimeDelta` that has a duration of `seconds`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 0 ), NormTimeDelta::ZERO );
+	/// ```
 	pub fn new_seconds( seconds: i64 ) -> Self {
 		Self( seconds )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `days` normdays.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_days( 1 ), NormTimeDelta::new_seconds( 100_000 ) );
+	/// ```
 	pub fn new_days( days: i64 ) -> Self {
 		Self( days * DUR_NORMDAY )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `years` normyears.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ), NormTimeDelta::new_seconds( 30_000_000 ) );
+	/// ```
 	pub fn new_years( years: i64 ) -> Self {
 		Self( years * DUR_NORMYEAR )
 	}
 
-	/// Returns `true` if `self` is 0.
+	/// Returns `true` if `self` has a duration of 0 seconds.
 	pub fn is_zero( &self ) -> bool {
 		self.0 == 0
 	}
 
-	/// Returns the length of `self` in seconds.
+	/// Returns the duration of `self` in seconds.
 	pub fn seconds( &self ) -> i64 {
 		self.0
 	}
 }
 
+/// Adding two `NormTimeDelta` together returns the sum of the duration of both.
+///
+/// # Example
+///
+/// ```
+/// use normtime::NormTimeDelta;
+///
+/// assert_eq!(
+/// 	NormTimeDelta::new_seconds( 1 ) + NormTimeDelta::new_seconds( 10 ),
+/// 	NormTimeDelta::new_seconds( 11 )
+/// );
+/// ```
 impl Add for NormTimeDelta {
 	type Output = Self;
 
@@ -62,6 +97,19 @@ impl Add for NormTimeDelta {
 	}
 }
 
+
+/// Subtracting two `NormTimeDelta`.
+///
+/// # Example
+///
+/// ```
+/// use normtime::NormTimeDelta;
+///
+/// assert_eq!(
+/// 	NormTimeDelta::new_seconds( 1 ) - NormTimeDelta::new_seconds( 10 ),
+/// 	NormTimeDelta::new_seconds( -9 )
+/// );
+/// ```
 impl Sub for NormTimeDelta {
 	type Output = Self;
 
@@ -70,12 +118,16 @@ impl Sub for NormTimeDelta {
 	}
 }
 
-impl Sum for NormTimeDelta {
-	fn sum<I>( iter: I ) -> Self
-	where
-		I: Iterator<Item = Self>
-	{
-		iter.fold( Self( 0 ), |acc, x| acc + x )
+
+impl<'a> Sum<&'a NormTimeDelta> for NormTimeDelta {
+	fn sum<I: Iterator<Item = &'a NormTimeDelta>>( iter: I ) -> Self {
+		iter.fold( NormTimeDelta::ZERO, |acc, x| acc + *x )
+	}
+}
+
+impl Sum<NormTimeDelta> for NormTimeDelta {
+	fn sum<I: Iterator<Item = NormTimeDelta>>( iter: I ) -> Self {
+		iter.fold( NormTimeDelta::ZERO, |acc, x| acc + x )
 	}
 }
 
@@ -226,14 +278,15 @@ mod tests {
 	}
 
 	#[test]
-	fn normtimedelta_sum() {
-		let accumulated: NormTimeDelta = [
+	fn calculate_sum_over_iterator() {
+		let items = [
 			NormTimeDelta::new_seconds( 10 ),
-			NormTimeDelta::new_seconds( 10 ),
-			NormTimeDelta::new_seconds( 10 ),
-		].into_iter().sum();
+			NormTimeDelta::new_seconds( 11 ),
+			NormTimeDelta::new_seconds( 12 ),
+		];
 
-		assert_eq!( accumulated, NormTimeDelta::new_seconds( 30 ) );
+		assert_eq!( items.iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
+		assert_eq!( items.into_iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
 	}
 
 	#[test]
