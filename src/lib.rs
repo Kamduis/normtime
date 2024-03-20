@@ -57,7 +57,7 @@
 mod time;
 pub use crate::time::NormTime;
 mod duration;
-pub use crate::duration::NormTimeDelta;
+pub use crate::duration::{NormTimeDelta, Unit};
 
 
 
@@ -80,3 +80,9 @@ const DUR_NORMWEEK: i64 = 1_000_000;
 
 /// The duration of a normday in seconds.
 const DUR_NORMDAY: i64 = 100_000;
+
+/// The duration of an hour in seconds.
+const DUR_HOUR: i64 = 3600;
+
+/// The duration of a minute in seconds.
+const DUR_MINUTE: i64 = 60;

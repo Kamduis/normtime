@@ -8,9 +8,53 @@
 
 
 use std::iter::Sum;
+use std::fmt;
 use std::ops::{Add, Sub};
 
-use crate::{DUR_NORMDAY, DUR_NORMYEAR};
+use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_HOUR, DUR_MINUTE};
+
+
+
+
+//=============================================================================
+// Units
+
+
+/// Returns the last digit of an unsigned integer number.
+#[derive( Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Debug )]
+pub enum Unit {
+	Year,
+	Month,
+	Week,
+	Day,
+	Hour,
+	Minute,
+	Second,
+}
+
+/// Representing unit as string.
+///
+/// # Example
+///
+/// ```
+/// use normtime::Unit;
+///
+/// assert_eq!( Unit::Year.to_string(), "normyears" );
+/// assert_eq!( Unit::Second.to_string(), "seconds" );
+/// ```
+impl fmt::Display for Unit {
+	fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
+		match self {
+			Self::Year => write!( f, "normyears" ),
+			Self::Month => write!( f, "normmonths" ),
+			Self::Week => write!( f, "normweeks" ),
+			Self::Day => write!( f, "normdays" ),
+			Self::Hour => write!( f, "hours" ),
+			Self::Minute => write!( f, "minutes" ),
+			Self::Second => write!( f, "seconds" ),
+		}
+	}
+}
 
 
 
@@ -92,6 +136,81 @@ impl NormTimeDelta {
 		self.0
 	}
 
+	/// Returns the duration of `self` in minutes.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ).minutes(), 500_000 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 60 ).minutes(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 119 ).minutes(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 120 ).minutes(), 2 );
+	/// ```
+	pub fn minutes( &self ) -> i64 {
+		self.0 / DUR_MINUTE
+	}
+
+	/// Returns the duration of `self` in hours.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ).hours(), 8333 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 3600 ).hours(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 7199 ).hours(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 7200 ).hours(), 2 );
+	/// ```
+	pub fn hours( &self ) -> i64 {
+		self.0 / DUR_HOUR
+	}
+
+	/// Returns the duration of `self` in normdays.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ).days(), 300 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 100_000 ).days(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 199_999 ).days(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 200_000 ).days(), 2 );
+	/// ```
+	pub fn days( &self ) -> i64 {
+		self.0 / DUR_NORMDAY
+	}
+
+	/// Returns the duration of `self` in normweeks.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ).weeks(), 30 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 1_000_000 ).weeks(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 1_999_999 ).weeks(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 2_000_000 ).weeks(), 2 );
+	/// ```
+	pub fn weeks( &self ) -> i64 {
+		self.0 / DUR_NORMWEEK
+	}
+
+	/// Returns the duration of `self` in normmonths.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( 1 ).months(), 10 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 3_000_000 ).months(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 3_999_999 ).months(), 1 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 6_000_000 ).months(), 2 );
+	/// ```
+	pub fn months( &self ) -> i64 {
+		self.0 / DUR_NORMMONTH
+	}
+
 	/// Returns the duration of `self` in normyears.
 	///
 	/// # Example
@@ -119,7 +238,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_years( 20 ).roughly( false ), "Anfang 20" );
 	/// assert_eq!( NormTimeDelta::new_years( 24 ).roughly( false ), "Mitte 20" );
 	/// assert_eq!( NormTimeDelta::new_years( 28 ).roughly( false ), "Ende 20" );
-
+	///
 	/// assert_eq!( NormTimeDelta::new_years( 2 ).roughly( true ), "Sehr jung" );
 	/// assert_eq!( NormTimeDelta::new_years( 4 ).roughly( true ), "Jung" );
 	/// assert_eq!( NormTimeDelta::new_years( 13 ).roughly( true ), "An Reife gewonnen" );
@@ -143,6 +262,63 @@ impl NormTimeDelta {
 				}
 			},
 		}
+	}
+
+	/// Returns a string representation of `self` with choosable units rounded to the smallest unit provided.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day ] ), "900 normdays" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays, 1 hours" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "900 normdays, 1 hours, 23 minutes" );
+	/// ```
+	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
+		let mut number = self.seconds();
+
+		let mut elems: Vec<(i64, Unit)> = Vec::new();
+
+		if units.iter().find( |&x| x == &Unit::Year ).is_some() {
+			let val = number / DUR_NORMYEAR;
+			elems.push( ( val, Unit::Year ) );
+			number -= val * DUR_NORMYEAR;
+		}
+		if units.iter().find( |&x| x == &Unit::Month ).is_some() {
+			let val = number / DUR_NORMMONTH;
+			elems.push( ( val, Unit::Month ) );
+			number -= val * DUR_NORMMONTH;
+		}
+		if units.iter().find( |&x| x == &Unit::Week ).is_some() {
+			let val = number / DUR_NORMWEEK;
+			elems.push( ( val, Unit::Week ) );
+			number -= val * DUR_NORMWEEK;
+		}
+		if units.iter().find( |&x| x == &Unit::Day ).is_some() {
+			let val = number / DUR_NORMDAY;
+			elems.push( ( val, Unit::Day ) );
+			number -= val * DUR_NORMDAY;
+		}
+		if units.iter().find( |&x| x == &Unit::Hour ).is_some() {
+			let val = number / DUR_HOUR;
+			elems.push( ( val, Unit::Hour ) );
+			number -= val * DUR_HOUR;
+		}
+		if units.iter().find( |&x| x == &Unit::Minute ).is_some() {
+			let val = number / DUR_MINUTE;
+			elems.push( ( val, Unit::Minute ) );
+			number -= val * DUR_MINUTE;
+		}
+		if units.iter().find( |&x| x == &Unit::Second ).is_some() {
+			elems.push( ( number, Unit::Second ) );
+		}
+
+		elems.iter()
+			.map( |( k, v )| format!( "{} {}", k, v ) )
+			.collect::<Vec<String>>()
+			.join( ", " )
 	}
 }
 
@@ -197,6 +373,22 @@ impl<'a> Sum<&'a NormTimeDelta> for NormTimeDelta {
 impl Sum<NormTimeDelta> for NormTimeDelta {
 	fn sum<I: Iterator<Item = NormTimeDelta>>( iter: I ) -> Self {
 		iter.fold( NormTimeDelta::ZERO, |acc, x| acc + x )
+	}
+}
+
+/// Normtime duration is displayed in seconds.
+///
+/// # Example
+///
+/// ```
+/// use normtime::NormTimeDelta;
+///
+/// assert_eq!( NormTimeDelta::new_seconds( 100 ).to_string(), "100 seconds" );
+/// assert_eq!( NormTimeDelta::new_days( 1 ).to_string(), "100000 seconds" );
+/// ```
+impl fmt::Display for NormTimeDelta {
+	fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
+		write!( f, "{} seconds", self.0 )
 	}
 }
 
