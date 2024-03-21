@@ -63,6 +63,22 @@ pub use crate::duration::{NormTimeDelta, Unit};
 
 
 //=============================================================================
+// Traits
+
+
+/// Providing conversion into LaTeX code.
+///
+/// This Trait is only available, if the **`tex`** feature has been enabled.
+#[cfg( feature = "tex" )]
+pub trait Latex {
+	/// Converts the entity into a LaTeX-string.
+	fn to_latex( &self ) -> String;
+}
+
+
+
+
+//=============================================================================
 // Constants
 
 

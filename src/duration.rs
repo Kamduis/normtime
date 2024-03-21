@@ -11,6 +11,9 @@ use std::iter::Sum;
 use std::fmt;
 use std::ops::{Add, Sub};
 
+#[cfg( feature = "tex" )]
+use crate::Latex;
+
 use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_HOUR, DUR_MINUTE};
 
 
@@ -389,6 +392,24 @@ impl Sum<NormTimeDelta> for NormTimeDelta {
 impl fmt::Display for NormTimeDelta {
 	fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
 		write!( f, "{} seconds", self.0 )
+	}
+}
+
+/// Printing `self` as LaTeX string using the `siunitx`-LaTeX-package.
+///
+/// # Example
+///
+/// ```
+/// use normtime::Latex;
+/// use normtime::NormTimeDelta;
+///
+/// assert_eq!( NormTimeDelta::new_seconds( 100 ).to_latex(), r"\qty{100}{\second}" );
+/// assert_eq!( NormTimeDelta::new_days( 1 ).to_latex(), r"\qty{100000}{\second}" );
+/// ```
+#[cfg( feature = "tex" )]
+impl Latex for NormTimeDelta {
+	fn to_latex( &self ) -> String {
+		format!( r"\qty{{{}}}{{\second}}", self.0 )
 	}
 }
 
