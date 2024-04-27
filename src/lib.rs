@@ -86,7 +86,7 @@ pub trait Latex {
 const NORMTIME_OFFSET: i64 = 3_092_601_600;
 
 /// The duration of a normyear in seconds.
-const DUR_NORMYEAR: i64 = 30_000_000;
+pub const DUR_NORMYEAR: i64 = 30_000_000;
 
 /// The duration of a normmonth in seconds.
 const DUR_NORMMONTH: i64 = 3_000_000;

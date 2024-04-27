@@ -59,6 +59,34 @@ impl fmt::Display for Unit {
 	}
 }
 
+/// Represent unit as LaTeX unit command.
+///
+/// # Example
+///
+/// ```
+/// use normtime::Latex;
+/// use normtime::Unit;
+///
+/// assert_eq!( Unit::Year.to_latex(), r"\normyear" );
+/// assert_eq!( Unit::Second.to_latex(), r"\second" );
+/// ```
+#[cfg( feature = "tex" )]
+impl Latex for Unit {
+	fn to_latex( &self ) -> String {
+		let res = match self {
+			Self::Year => r"\normyear",
+			Self::Month => r"\normmonth",
+			Self::Week => r"\normweek",
+			Self::Day => r"\normday",
+			Self::Hour => r"\hour",
+			Self::Minute => r"\minute",
+			Self::Second => r"\second",
+		};
+
+		res.to_string()
+	}
+}
+
 
 
 
@@ -267,19 +295,8 @@ impl NormTimeDelta {
 		}
 	}
 
-	/// Returns a string representation of `self` with choosable units rounded to the smallest unit provided.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use normtime::{NormTimeDelta, Unit};
-	///
-	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day ] ), "900 normdays" );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays, 1 hours" );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "900 normdays, 1 hours, 23 minutes" );
-	/// ```
-	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
+	/// Returns duration as a vector of unit representations with selectable units rounded to the smallest unit provided.
+	fn to_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
 		let mut number = self.seconds();
 
 		let mut elems: Vec<(i64, Unit)> = Vec::new();
@@ -318,8 +335,45 @@ impl NormTimeDelta {
 			elems.push( ( number, Unit::Second ) );
 		}
 
-		elems.iter()
+		elems
+	}
+
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day ] ), "900 normdays" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays, 1 hours" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "900 normdays, 1 hours, 23 minutes" );
+	/// ```
+	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
+		self.to_units( units ).iter()
 			.map( |( k, v )| format!( "{} {}", k, v ) )
+			.collect::<Vec<String>>()
+			.join( ", " )
+	}
+
+	/// Returns a LaTeX-string representation of `self` with selectable units rounded to the smallest unit provided.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::Latex;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day ] ), r"\qty{900}{\normday}" );
+	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), r"\qty{900}{\normday}, \qty{1}{\hour}" );
+	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), r"\qty{900}{\normday}, \qty{1}{\hour}, \qty{23}{\minute}" );
+	/// ```
+	#[cfg( feature = "tex" )]
+	pub fn to_latex_unit( &self, units: &[Unit] ) -> String {
+		self.to_units( units ).iter()
+			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex() ) )
 			.collect::<Vec<String>>()
 			.join( ", " )
 	}
@@ -395,7 +449,7 @@ impl fmt::Display for NormTimeDelta {
 	}
 }
 
-/// Printing `self` as LaTeX string using the `siunitx`-LaTeX-package.
+/// Returning `self` as LaTeX string using the `siunitx`-LaTeX-package.
 ///
 /// # Example
 ///

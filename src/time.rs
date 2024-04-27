@@ -87,6 +87,34 @@ impl NormTime {
 
 		Self( self.0 + tdelta.num_seconds() )
 	}
+
+	/// Return the date part of `self` as `String`.
+	pub fn to_string_date( self ) -> String {
+		let year = self.0.div_euclid( DUR_NORMYEAR );
+		let subyear = self.0.rem_euclid( DUR_NORMYEAR );
+		let month = subyear.div_euclid( DUR_NORMMONTH );
+		let submonth = subyear.rem_euclid( DUR_NORMMONTH );
+		let day = submonth.div_euclid( DUR_NORMDAY );
+
+		format!( "{:0>4}-{:0>2}-{:0>2}", year, month, day )
+	}
+
+	/// Return the date part of `self` as LaTeX command.
+	#[cfg( feature = "tex" )]
+	pub fn to_latex_date( self ) -> String {
+		format!( r"{}\,\uz{{}}", self.to_string_date() )
+	}
+
+	/// Return the clock part of `self` as `String`.
+	pub fn to_string_clock( self ) -> String {
+		let subday = self.0.rem_euclid( DUR_NORMDAY );
+		let hour = subday.div_euclid( 3600 );
+		let subhour = subday.rem_euclid( 3600 );
+		let minute = subhour.div_euclid( 60 );
+		let seconds = subday.rem_euclid( 60 );
+
+		format!( "{:0>2}:{:0>2}:{:0>2}", hour, minute, seconds )
+	}
 }
 
 impl PartialEq<NaiveDateTime> for NormTime {
