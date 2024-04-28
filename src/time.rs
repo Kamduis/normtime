@@ -101,13 +101,23 @@ impl NormTime {
 		let submonth = subyear.rem_euclid( DUR_NORMMONTH );
 		let day = submonth.div_euclid( DUR_NORMDAY );
 
-		format!( "{:0>4}-{:0>2}-{:0>2}", year, month, day )
+		if year < 0 {
+			format!( "-{:0>4}-{:0>2}-{:0>2}", year.abs(), month, day )
+		} else {
+			format!( "{:0>4}-{:0>2}-{:0>2}", year, month, day )
+		}
 	}
 
 	/// Return the date part of `self` as LaTeX command.
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_date( self ) -> String {
-		format!( r"{}\,\uz{{}}", self.to_string_date() )
+		let mut date_txt = self.to_string_date();
+
+		if date_txt.starts_with( '-' ) {
+			date_txt = date_txt.replacen( '-', "−", 1 );
+		}
+
+		format!( r"{}\,\uz{{}}", date_txt )
 	}
 
 	/// Return the clock part of `self` as `String`.
@@ -146,18 +156,7 @@ impl Sub for NormTime {
 
 impl fmt::Debug for NormTime {
 	fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
-		let year = self.0.div_euclid( DUR_NORMYEAR );
-		let subyear = self.0.rem_euclid( DUR_NORMYEAR );
-		let month = subyear.div_euclid( DUR_NORMMONTH );
-		let submonth = subyear.rem_euclid( DUR_NORMMONTH );
-		let day = submonth.div_euclid( DUR_NORMDAY );
-		let subday = submonth.rem_euclid( DUR_NORMDAY );
-		let hour = subday.div_euclid( 3600 );
-		let subhour = subday.rem_euclid( 3600 );
-		let minute = subhour.div_euclid( 60 );
-		let seconds = subday.rem_euclid( 60 );
-
-		write!( f, "{:0>4}-{:0>2}-{:0>2}N{:0>2}:{:0>2}:{:0>2}", year, month, day, hour, minute, seconds )
+		write!( f, "{}N{}", self.to_string_date(), self.to_string_clock() )
 	}
 }
 
