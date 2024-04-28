@@ -88,6 +88,11 @@ impl NormTime {
 		Self( self.0 + tdelta.num_seconds() )
 	}
 
+	/// Returns the Unix timestamp representing `self`.
+	pub fn timestamp( &self ) -> i64 {
+		NORMTIME_OFFSET + self.0
+	}
+
 	/// Return the date part of `self` as `String`.
 	pub fn to_string_date( self ) -> String {
 		let year = self.0.div_euclid( DUR_NORMYEAR );
@@ -229,8 +234,7 @@ impl From<NaiveDate> for NormTime {
 /// ```
 impl From<NormTime> for NaiveDateTime {
 	fn from( item: NormTime ) -> Self {
-		let tstamp = NORMTIME_OFFSET + item.0;
-		NaiveDateTime::from_timestamp_opt( tstamp, 0 ).unwrap()
+		NaiveDateTime::from_timestamp_opt( item.timestamp(), 0 ).unwrap()
 	}
 }
 
