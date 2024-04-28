@@ -10,11 +10,27 @@
 use std::iter::Sum;
 use std::fmt;
 use std::ops::{Add, Sub};
+use std::str::FromStr;
+
+use thiserror::Error;
 
 #[cfg( feature = "tex" )]
 use crate::Latex;
 
 use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_HOUR, DUR_MINUTE};
+
+
+
+
+//=============================================================================
+// Errors
+
+
+#[derive( Error, Debug )]
+pub enum ConversionError {
+	#[error( "Cannot parse into `Unit`: {0}" )]
+	FromStrFail( String ),
+}
 
 
 
@@ -33,6 +49,27 @@ pub enum Unit {
 	Hour,
 	Minute,
 	Second,
+}
+
+impl FromStr for Unit {
+	type Err = ConversionError;
+
+	fn from_str( s: &str ) -> Result<Self, Self::Err> {
+		let res = match s.to_lowercase().as_str() {
+			"normyears" => Self::Year,
+			"normmonths" => Self::Month,
+			"normweeks" => Self::Week,
+			"normdays" => Self::Day,
+			"hours" => Self::Hour,
+			"minutes" => Self::Minute,
+			"seconds" => Self::Second,
+			_ => {
+				return Err( ConversionError::FromStrFail( s.to_string() ) );
+			},
+		};
+
+		Ok( res )
+	}
 }
 
 /// Representing unit as string.
@@ -352,7 +389,15 @@ impl NormTimeDelta {
 	/// ```
 	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
 		self.to_units( units ).iter()
-			.map( |( k, v )| format!( "{} {}", k, v ) )
+			.map( |( k, v )| {
+				let name_unit = v.to_string();
+				let postfix = if *k == 1 {
+					name_unit[0..name_unit.len()-1].to_string()
+				} else {
+					name_unit
+				};
+				format!( "{} {}", k, postfix )
+			} )
 			.collect::<Vec<String>>()
 			.join( ", " )
 	}
