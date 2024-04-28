@@ -93,6 +93,17 @@ impl NormTime {
 		NORMTIME_OFFSET + self.0
 	}
 
+	/// Return the string part of `self` as `String`.
+	pub fn to_string_year( self ) -> String {
+		let year = self.0.div_euclid( DUR_NORMYEAR );
+
+		if year < 0 {
+			format!( "-{:0>4}", year.abs() )
+		} else {
+			format!( "{:0>4}", year )
+		}
+	}
+
 	/// Return the date part of `self` as `String`.
 	pub fn to_string_date( self ) -> String {
 		let year = self.0.div_euclid( DUR_NORMYEAR );
