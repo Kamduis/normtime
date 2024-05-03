@@ -375,7 +375,7 @@ impl NormTimeDelta {
 		elems
 	}
 
-	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided.
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted.
 	///
 	/// # Example
 	///
@@ -384,11 +384,16 @@ impl NormTimeDelta {
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
 	/// assert_eq!( delta.to_string_unit( &[ Unit::Day ] ), "900 normdays" );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays, 1 hours" );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "900 normdays, 1 hours, 23 minutes" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays, 1 hour" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "900 normdays, 1 hour, 23 minutes" );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!( delta_1.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "1 hour" );
+	/// assert_eq!( delta_1.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "1 hour, 23 minutes" );
 	/// ```
 	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
 		self.to_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| {
 				let name_unit = v.to_string();
 				let postfix = if *k == 1 {
@@ -414,10 +419,15 @@ impl NormTimeDelta {
 	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day ] ), r"\qty{900}{\normday}" );
 	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), r"\qty{900}{\normday}, \qty{1}{\hour}" );
 	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), r"\qty{900}{\normday}, \qty{1}{\hour}, \qty{23}{\minute}" );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!( delta_1.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), r"\qty{1}{\hour}" );
+	/// assert_eq!( delta_1.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), r"\qty{1}{\hour}, \qty{23}{\minute}" );
 	/// ```
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_unit( &self, units: &[Unit] ) -> String {
 		self.to_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex() ) )
 			.collect::<Vec<String>>()
 			.join( ", " )
