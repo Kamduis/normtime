@@ -194,6 +194,18 @@ impl NormTimeDelta {
 		Self( years * DUR_NORMYEAR )
 	}
 
+	/// Computes the absolute value of `self`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_years( -1 ).abs(), NormTimeDelta::new_seconds( 30_000_000 ) );
+	/// ```
+	pub fn abs( self ) -> Self {
+		Self( self.0.abs() )
+	}
+
 	/// Returns `true` if `self` has a duration of 0 seconds.
 	pub fn is_zero( &self ) -> bool {
 		self.0 == 0
