@@ -153,7 +153,7 @@ impl Add<NormTimeDelta> for NormTime {
 	type Output = Self;
 
 	fn add( self, other: NormTimeDelta ) -> Self::Output {
-		Self( self.0 + other.0 )
+		Self( self.0 + other.secs )
 	}
 }
 
@@ -161,7 +161,7 @@ impl Sub for NormTime {
 	type Output = NormTimeDelta;
 
 	fn sub( self, other: Self ) -> Self::Output {
-		NormTimeDelta( self.0 - other.0 )
+		NormTimeDelta::new( self.0 - other.0, 0 ).unwrap()
 	}
 }
 

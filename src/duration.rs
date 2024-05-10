@@ -36,6 +36,16 @@ pub enum ConversionError {
 
 
 //=============================================================================
+// Constants
+
+
+/// The number of nanoseconds per second.
+const NANOS_PER_SEC: i32 = 1_000_000_000;
+
+
+
+
+//=============================================================================
 // Units
 
 
@@ -150,13 +160,56 @@ fn last_digit( number: u64 ) -> u64 {
 ///
 /// `NormTimeDelta` differs from e.g. `chrono::TimeDelta`, that it uses normdays, normweeks etc. that have a different duration than standard days etc. The duration of a second is identical, though.
 #[derive( Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Debug )]
-pub struct NormTimeDelta( pub(super) i64 );
+pub struct NormTimeDelta{
+	pub(super) secs: i64,
+	nanos: i32,
+}
 
 impl NormTimeDelta {
 	/// Creates a new `NormTimeDelta` that has a duration of zero seconds.
-	pub const ZERO: Self = Self( 0 );
+	pub const ZERO: Self = Self {
+		secs: 0,
+		nanos: 0,
+	};
 
-	/// Creates a new `NormTimeDelta` that has a duration of `seconds`.
+	/// Creates a new `NormTimeDelta` that has a duration of `secs` + `nanos`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new( 0, 0 ).unwrap(), NormTimeDelta::ZERO );
+	/// ```
+	pub fn new( secs: i64, nanos: u32 ) -> Option<Self> {
+		if nanos >= 1_000_000_000 {
+			return None;
+		}
+
+		Some( Self {
+			secs,
+			nanos: nanos as i32,
+		} )
+	}
+
+	/// Returns the subsecond fraction of `NormTimeDelta` as number of nanoseconds.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new( 1, 10 ).unwrap().subsec_nanos(), 10 );
+	/// ```
+	pub fn subsec_nanos( &self ) -> i32 {
+		if self.secs < 0 && self.nanos > 0 {
+			self.nanos - NANOS_PER_SEC
+		} else {
+			self.nanos
+		}
+	}
+
+	/// Creates a new `NormTimeDelta` that has a duration of `secs`.
 	///
 	/// # Example
 	///
@@ -165,8 +218,11 @@ impl NormTimeDelta {
 	///
 	/// assert_eq!( NormTimeDelta::new_seconds( 0 ), NormTimeDelta::ZERO );
 	/// ```
-	pub fn new_seconds( seconds: i64 ) -> Self {
-		Self( seconds )
+	pub fn new_seconds( secs: i64 ) -> Self {
+		Self {
+			secs,
+			nanos: 0,
+		}
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `days` normdays.
@@ -179,7 +235,10 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_days( 1 ), NormTimeDelta::new_seconds( 100_000 ) );
 	/// ```
 	pub fn new_days( days: i64 ) -> Self {
-		Self( days * DUR_NORMDAY )
+		Self {
+			secs: days * DUR_NORMDAY,
+			nanos: 0,
+		}
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `years` normyears.
@@ -191,7 +250,10 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_years( 1 ), NormTimeDelta::new_seconds( 30_000_000 ) );
 	/// ```
 	pub fn new_years( years: i64 ) -> Self {
-		Self( years * DUR_NORMYEAR )
+		Self {
+			secs: years * DUR_NORMYEAR,
+			nanos: 0,
+		}
 	}
 
 	/// Computes the absolute value of `self`.
@@ -203,17 +265,31 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_years( -1 ).abs(), NormTimeDelta::new_seconds( 30_000_000 ) );
 	/// ```
 	pub fn abs( self ) -> Self {
-		Self( self.0.abs() )
+		if self.secs < 0 && self.nanos != 0 {
+			Self {
+				secs: ( self.secs + 1 ).abs(),
+				nanos: NANOS_PER_SEC - self.nanos,
+			}
+		} else {
+			Self {
+				secs: self.secs.abs(),
+				nanos: self.nanos
+			}
+		}
 	}
 
 	/// Returns `true` if `self` has a duration of 0 seconds.
 	pub fn is_zero( &self ) -> bool {
-		self.0 == 0
+		self.secs == 0 && self.nanos == 0
 	}
 
 	/// Returns the duration of `self` in seconds.
 	pub fn seconds( &self ) -> i64 {
-		self.0
+		if self.secs < 0 && self.nanos > 0 {
+			self.secs + 1
+		} else {
+			self.secs
+		}
 	}
 
 	/// Returns the duration of `self` in minutes.
@@ -228,7 +304,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 120 ).minutes(), 2 );
 	/// ```
 	pub fn minutes( &self ) -> i64 {
-		self.0 / DUR_MINUTE
+		self.seconds() / DUR_MINUTE
 	}
 
 	/// Returns the duration of `self` in hours.
@@ -243,7 +319,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 7200 ).hours(), 2 );
 	/// ```
 	pub fn hours( &self ) -> i64 {
-		self.0 / DUR_HOUR
+		self.seconds() / DUR_HOUR
 	}
 
 	/// Returns the duration of `self` in normdays.
@@ -258,7 +334,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 200_000 ).days(), 2 );
 	/// ```
 	pub fn days( &self ) -> i64 {
-		self.0 / DUR_NORMDAY
+		self.seconds() / DUR_NORMDAY
 	}
 
 	/// Returns the duration of `self` in normweeks.
@@ -273,7 +349,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 2_000_000 ).weeks(), 2 );
 	/// ```
 	pub fn weeks( &self ) -> i64 {
-		self.0 / DUR_NORMWEEK
+		self.seconds() / DUR_NORMWEEK
 	}
 
 	/// Returns the duration of `self` in normmonths.
@@ -288,7 +364,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 6_000_000 ).months(), 2 );
 	/// ```
 	pub fn months( &self ) -> i64 {
-		self.0 / DUR_NORMMONTH
+		self.seconds() / DUR_NORMMONTH
 	}
 
 	/// Returns the duration of `self` in normyears.
@@ -303,7 +379,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 90_000_000 ).years(), 3 );
 	/// ```
 	pub fn years( &self ) -> i64 {
-		self.0 / DUR_NORMYEAR
+		self.seconds() / DUR_NORMYEAR
 	}
 
 	/// Returns the duration of `self` in rough categories. E.g. "Kleinkind", "Kind", "Teenager", "Anfang 20", "Mitte 20", "Ende 20" etc.
@@ -461,8 +537,16 @@ impl NormTimeDelta {
 impl Add for NormTimeDelta {
 	type Output = Self;
 
-	fn add( self, other: NormTimeDelta ) -> Self::Output {
-		Self( self.0 + other.0 )
+	fn add( self, rhs: NormTimeDelta ) -> Self::Output {
+		let mut secs = self.secs + rhs.secs;
+		let mut nanos = self.nanos + rhs.nanos;
+
+		if nanos >= NANOS_PER_SEC {
+			nanos -= NANOS_PER_SEC;
+			secs += 1;
+		}
+
+		Self::new( secs, nanos as u32 ).unwrap()
 	}
 }
 
@@ -482,8 +566,16 @@ impl Add for NormTimeDelta {
 impl Sub for NormTimeDelta {
 	type Output = Self;
 
-	fn sub( self, other: Self ) -> Self::Output {
-		Self( self.0 - other.0 )
+	fn sub( self, rhs: Self ) -> Self::Output {
+		let mut secs = self.secs - rhs.secs;
+		let mut nanos = self.nanos - rhs.nanos;
+
+		if nanos < 0 {
+			nanos += NANOS_PER_SEC;
+			secs -= 1;
+		}
+
+		Self::new( secs, nanos as u32 ).unwrap()
 	}
 }
 
@@ -512,7 +604,7 @@ impl Sum<NormTimeDelta> for NormTimeDelta {
 /// ```
 impl fmt::Display for NormTimeDelta {
 	fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
-		write!( f, "{} seconds", self.0 )
+		write!( f, "{} seconds", self.secs )
 	}
 }
 
@@ -530,7 +622,7 @@ impl fmt::Display for NormTimeDelta {
 #[cfg( feature = "tex" )]
 impl Latex for NormTimeDelta {
 	fn to_latex( &self ) -> String {
-		format!( r"\qty{{{}}}{{\second}}", self.0 )
+		format!( r"\qty{{{}}}{{\second}}", self.secs )
 	}
 }
 
@@ -558,7 +650,7 @@ mod normtime_serde {
 				}
 			}
 
-			serializer.serialize_i64( ( *self ).0 )
+			serializer.serialize_i64( ( *self ).secs )
 		}
 	}
 
