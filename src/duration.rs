@@ -17,7 +17,7 @@ use thiserror::Error;
 #[cfg( feature = "tex" )]
 use crate::Latex;
 
-use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_HOUR, DUR_MINUTE};
+use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_TERRAYEAR, DUR_HOUR, DUR_MINUTE};
 
 
 
@@ -252,6 +252,21 @@ impl NormTimeDelta {
 	pub fn new_years( years: i64 ) -> Self {
 		Self {
 			secs: years * DUR_NORMYEAR,
+			nanos: 0,
+		}
+	}
+
+	/// Creates a new `NormTimeDelta` that has a duration of `years` earth years.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	/// assert_eq!( NormTimeDelta::new_earthyears( 1 ), NormTimeDelta::new_seconds( 31_557_600 ) );
+	/// ```
+	pub fn new_earthyears( years: i64 ) -> Self {
+		Self {
+			secs: years * DUR_TERRAYEAR,
 			nanos: 0,
 		}
 	}

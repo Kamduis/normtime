@@ -97,6 +97,9 @@ const DUR_NORMWEEK: i64 = 1_000_000;
 /// The duration of a normday in seconds.
 const DUR_NORMDAY: i64 = 100_000;
 
+/// The duration of a earth year in seconds.
+pub const DUR_TERRAYEAR: i64 = 31_557_600;
+
 /// The duration of an hour in seconds.
 const DUR_HOUR: i64 = 3600;
 
