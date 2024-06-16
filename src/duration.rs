@@ -66,13 +66,13 @@ impl FromStr for Unit {
 
 	fn from_str( s: &str ) -> Result<Self, Self::Err> {
 		let res = match s.to_lowercase().as_str() {
-			"normyears" => Self::Year,
-			"normmonths" => Self::Month,
-			"normweeks" => Self::Week,
-			"normdays" => Self::Day,
-			"hours" => Self::Hour,
-			"minutes" => Self::Minute,
-			"seconds" => Self::Second,
+			"normyears" | "normyear" | "years" | "year" => Self::Year,
+			"normmonths" | "normmonth" | "months" | "month" => Self::Month,
+			"normweeks" | "normweek" | "weeks" | "week" => Self::Week,
+			"normdays" | "normday" | "days" | "day" => Self::Day,
+			"hours" | "hour" => Self::Hour,
+			"minutes" | "minute" => Self::Minute,
+			"seconds" | "second" => Self::Second,
 			_ => {
 				return Err( ConversionError::FromStrFail( s.to_string() ) );
 			},
