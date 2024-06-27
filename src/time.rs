@@ -200,8 +200,8 @@ impl fmt::Display for NormTime {
 /// use chrono::NaiveDate;
 ///
 /// assert_eq!(
-/// 	NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap() ),
-/// 	NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 )
+///     NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap() ),
+///     NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 )
 /// );
 /// ```
 impl From<NaiveDateTime> for NormTime {
@@ -219,8 +219,8 @@ impl From<NaiveDateTime> for NormTime {
 /// use chrono::NaiveDate;
 ///
 /// assert_eq!(
-/// 	NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap() ),
-/// 	NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 0 )
+///     NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap() ),
+///     NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 0 )
 /// );
 /// ```
 impl From<NaiveDate> for NormTime {
@@ -238,8 +238,8 @@ impl From<NaiveDate> for NormTime {
 /// use chrono::{NaiveDate, NaiveDateTime};
 ///
 /// assert_eq!(
-/// 	NaiveDateTime::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
-/// 	NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap()
+///     NaiveDateTime::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
+///     NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap()
 /// );
 /// ```
 impl From<NormTime> for NaiveDateTime {
@@ -257,13 +257,13 @@ impl From<NormTime> for NaiveDateTime {
 /// use chrono::NaiveDate;
 ///
 /// assert_eq!(
-/// 	NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap() ),
-/// 	NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
+///     NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap() ),
+///     NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
 /// );
 ///
 /// assert_eq!(
-/// 	NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
-/// 	NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
+///     NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
+///     NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
 /// );
 /// ```
 impl From<NormTime> for NaiveDate {
@@ -300,12 +300,12 @@ impl FromStr for NormTime {
 	type Err = TimeError;
 
 	fn from_str( s: &str ) -> Result<Self, Self::Err> {
-		let elems: Vec<&str> = s.split( "N" ).collect();
+		let elems: Vec<&str> = s.split( 'N' ).collect();
 		if elems.is_empty() || elems.len() > 2 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
 
-		let elems_date: Vec<&str> = elems[0].split( "-" ).collect();
+		let elems_date: Vec<&str> = elems[0].split( '-' ).collect();
 		if elems_date.len() != 3 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
@@ -318,7 +318,7 @@ impl FromStr for NormTime {
 			return Ok( NormTime( seconds ) );
 		};
 
-		let elems_time: Vec<&str> = elems_t.split( ":" ).collect();
+		let elems_time: Vec<&str> = elems_t.split( ':' ).collect();
 		if elems_time.len() != 3 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
@@ -337,8 +337,6 @@ mod normtime_serde {
 	use super::NormTime;
 
 	use std::fmt;
-
-	use serde;
 
 	impl serde::Serialize for NormTime {
 		fn serialize<S>( &self, serializer: S ) -> Result<S::Ok, S::Error>

@@ -436,42 +436,42 @@ impl NormTimeDelta {
 	}
 
 	/// Returns duration as a vector of unit representations with selectable units rounded to the smallest unit provided.
-	fn to_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
+	fn as_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
 		let mut number = self.seconds();
 
 		let mut elems: Vec<(i64, Unit)> = Vec::new();
 
-		if units.iter().find( |&x| x == &Unit::Year ).is_some() {
+		if units.iter().any( |x| x == &Unit::Year ) {
 			let val = number / DUR_NORMYEAR;
 			elems.push( ( val, Unit::Year ) );
 			number -= val * DUR_NORMYEAR;
 		}
-		if units.iter().find( |&x| x == &Unit::Month ).is_some() {
+		if units.iter().any( |x| x == &Unit::Month ) {
 			let val = number / DUR_NORMMONTH;
 			elems.push( ( val, Unit::Month ) );
 			number -= val * DUR_NORMMONTH;
 		}
-		if units.iter().find( |&x| x == &Unit::Week ).is_some() {
+		if units.iter().any( |x| x == &Unit::Week ) {
 			let val = number / DUR_NORMWEEK;
 			elems.push( ( val, Unit::Week ) );
 			number -= val * DUR_NORMWEEK;
 		}
-		if units.iter().find( |&x| x == &Unit::Day ).is_some() {
+		if units.iter().any( |x| x == &Unit::Day ) {
 			let val = number / DUR_NORMDAY;
 			elems.push( ( val, Unit::Day ) );
 			number -= val * DUR_NORMDAY;
 		}
-		if units.iter().find( |&x| x == &Unit::Hour ).is_some() {
+		if units.iter().any( |x| x == &Unit::Hour ) {
 			let val = number / DUR_HOUR;
 			elems.push( ( val, Unit::Hour ) );
 			number -= val * DUR_HOUR;
 		}
-		if units.iter().find( |&x| x == &Unit::Minute ).is_some() {
+		if units.iter().any( |x| x == &Unit::Minute ) {
 			let val = number / DUR_MINUTE;
 			elems.push( ( val, Unit::Minute ) );
 			number -= val * DUR_MINUTE;
 		}
-		if units.iter().find( |&x| x == &Unit::Second ).is_some() {
+		if units.iter().any( |x| x == &Unit::Second ) {
 			elems.push( ( number, Unit::Second ) );
 		}
 
@@ -495,7 +495,7 @@ impl NormTimeDelta {
 	/// assert_eq!( delta_1.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "1 hour, 23 minutes" );
 	/// ```
 	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
-		self.to_units( units ).iter()
+		self.as_units( units ).iter()
 			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| {
 				let name_unit = v.to_string();
@@ -529,7 +529,7 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_unit( &self, units: &[Unit] ) -> String {
-		self.to_units( units ).iter()
+		self.as_units( units ).iter()
 			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex() ) )
 			.collect::<Vec<String>>()
@@ -545,8 +545,8 @@ impl NormTimeDelta {
 /// use normtime::NormTimeDelta;
 ///
 /// assert_eq!(
-/// 	NormTimeDelta::new_seconds( 1 ) + NormTimeDelta::new_seconds( 10 ),
-/// 	NormTimeDelta::new_seconds( 11 )
+///     NormTimeDelta::new_seconds( 1 ) + NormTimeDelta::new_seconds( 10 ),
+///     NormTimeDelta::new_seconds( 11 )
 /// );
 /// ```
 impl Add for NormTimeDelta {
@@ -574,8 +574,8 @@ impl Add for NormTimeDelta {
 /// use normtime::NormTimeDelta;
 ///
 /// assert_eq!(
-/// 	NormTimeDelta::new_seconds( 1 ) - NormTimeDelta::new_seconds( 10 ),
-/// 	NormTimeDelta::new_seconds( -9 )
+///     NormTimeDelta::new_seconds( 1 ) - NormTimeDelta::new_seconds( 10 ),
+///     NormTimeDelta::new_seconds( -9 )
 /// );
 /// ```
 impl Sub for NormTimeDelta {
@@ -648,24 +648,12 @@ mod normtime_serde {
 
 	use std::fmt;
 
-	use serde;
-
 	impl serde::Serialize for NormTimeDelta {
 		fn serialize<S>( &self, serializer: S ) -> Result<S::Ok, S::Error>
 		where
 			S: serde::Serializer,
 		{
-			struct FormatWrapped<'a, D: 'a> {
-				inner: &'a D,
-			}
-
-			impl<'a, D: fmt::Debug> fmt::Display for FormatWrapped<'a, D> {
-				fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
-					self.inner.fmt( f )
-				}
-			}
-
-			serializer.serialize_i64( ( *self ).secs )
+			serializer.serialize_i64( self.secs )
 		}
 	}
 
@@ -733,9 +721,9 @@ mod normtime_serde {
 		{
 			if value <= i64::MAX as u64 {
 				return Ok( NormTimeDelta::new_seconds( value as i64 ) );
-			} else {
-				return Err( E::custom( format!( "u64 out of range: {}", value ) ) );
 			}
+
+			Err( E::custom( format!( "u64 out of range: {}", value ) ) )
 		}
 	}
 

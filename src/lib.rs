@@ -8,10 +8,10 @@
 //!
 //! * The second is identical to the second as defined by the International System of Units (SI).
 //! * The higher order units are simple multiples of a second:
-//! 	* 1 normday   := 100 ks (ca. 1 standard day)
-//! 	* 1 normweek  :=   1 Ms (ca. 12 standard days)
-//! 	* 1 normmonth :=   3 Ms (ca. 35 standard days)
-//! 	* 1 normyear  :=  30 Ms (ca. 1 standard year, ca. 347 standard days)
+//!     * 1 normday   := 100 ks (ca. 1 standard day)
+//!     * 1 normweek  :=   1 Ms (ca. 12 standard days)
+//!     * 1 normmonth :=   3 Ms (ca. 35 standard days)
+//!     * 1 normyear  :=  30 Ms (ca. 1 standard year, ca. 347 standard days)
 //! * The 0-point of the normtime is offset from Unix time by 3'089'836'800 seconds (2068-01-01T00:00:00 standard time)
 //!
 //! It is easy to crate a `NormTime`:
