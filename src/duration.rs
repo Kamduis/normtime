@@ -733,9 +733,9 @@ mod normtime_serde {
 		{
 			if value <= i64::MAX as u64 {
 				return Ok( NormTimeDelta::new_seconds( value as i64 ) );
-			} else {
-				return Err( E::custom( format!( "u64 out of range: {}", value ) ) );
 			}
+
+			Err( E::custom( format!( "u64 out of range: {}", value ) ) )
 		}
 	}
 
