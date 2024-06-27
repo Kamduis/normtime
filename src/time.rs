@@ -87,6 +87,60 @@ impl NormTime {
 
 		Self( self.0 + tdelta.num_seconds() )
 	}
+
+	/// Returns the Unix timestamp representing `self`.
+	pub fn timestamp( &self ) -> i64 {
+		NORMTIME_OFFSET + self.0
+	}
+
+	/// Return the string part of `self` as `String`.
+	pub fn to_string_year( self ) -> String {
+		let year = self.0.div_euclid( DUR_NORMYEAR );
+
+		if year < 0 {
+			format!( "-{:0>4}", year.abs() )
+		} else {
+			format!( "{:0>4}", year )
+		}
+	}
+
+	/// Return the date part of `self` as `String`.
+	pub fn to_string_date( self ) -> String {
+		let year = self.0.div_euclid( DUR_NORMYEAR );
+		let subyear = self.0.rem_euclid( DUR_NORMYEAR );
+		let month = subyear.div_euclid( DUR_NORMMONTH );
+		let submonth = subyear.rem_euclid( DUR_NORMMONTH );
+		let day = submonth.div_euclid( DUR_NORMDAY );
+
+		if year < 0 {
+			format!( "-{:0>4}-{:0>2}-{:0>2}", year.abs(), month, day )
+		} else {
+			format!( "{:0>4}-{:0>2}-{:0>2}", year, month, day )
+		}
+	}
+
+	/// Return the date part of `self` as LaTeX command.
+	#[cfg( feature = "tex" )]
+	pub fn to_latex_date( self ) -> String {
+		let mut date_txt = self.to_string_date();
+
+		if date_txt.starts_with( '-' ) {
+			date_txt = date_txt.replacen( '-', "−", 1 );
+		}
+
+		format!( r"{}\,\uz{{}}", date_txt )
+	}
+
+	/// Return the clock part of `self` as `String`.
+	pub fn to_string_clock( self ) -> String {
+		let subday = self.0.rem_euclid( DUR_NORMDAY );
+		let hour = subday.div_euclid( 3600 );
+		let subhour = subday.rem_euclid( 3600 );
+		let minute = subhour.div_euclid( 60 );
+		let seconds = subday.rem_euclid( 60 );
+
+		format!( "{:0>2}:{:0>2}:{:0>2}", hour, minute, seconds )
+	}
 }
 
 impl PartialEq<NaiveDateTime> for NormTime {
@@ -99,7 +153,7 @@ impl Add<NormTimeDelta> for NormTime {
 	type Output = Self;
 
 	fn add( self, other: NormTimeDelta ) -> Self::Output {
-		Self( self.0 + other.0 )
+		Self( self.0 + other.secs )
 	}
 }
 
@@ -107,24 +161,13 @@ impl Sub for NormTime {
 	type Output = NormTimeDelta;
 
 	fn sub( self, other: Self ) -> Self::Output {
-		NormTimeDelta( self.0 - other.0 )
+		NormTimeDelta::new( self.0 - other.0, 0 ).unwrap()
 	}
 }
 
 impl fmt::Debug for NormTime {
 	fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
-		let year = self.0.div_euclid( DUR_NORMYEAR );
-		let subyear = self.0.rem_euclid( DUR_NORMYEAR );
-		let month = subyear.div_euclid( DUR_NORMMONTH );
-		let submonth = subyear.rem_euclid( DUR_NORMMONTH );
-		let day = submonth.div_euclid( DUR_NORMDAY );
-		let subday = submonth.rem_euclid( DUR_NORMDAY );
-		let hour = subday.div_euclid( 3600 );
-		let subhour = subday.rem_euclid( 3600 );
-		let minute = subhour.div_euclid( 60 );
-		let seconds = subday.rem_euclid( 60 );
-
-		write!( f, "{:0>4}-{:0>2}-{:0>2}N{:0>2}:{:0>2}:{:0>2}", year, month, day, hour, minute, seconds )
+		write!( f, "{}N{}", self.to_string_date(), self.to_string_clock() )
 	}
 }
 
@@ -157,8 +200,8 @@ impl fmt::Display for NormTime {
 /// use chrono::NaiveDate;
 ///
 /// assert_eq!(
-/// 	NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap() ),
-/// 	NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 )
+///     NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap() ),
+///     NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 )
 /// );
 /// ```
 impl From<NaiveDateTime> for NormTime {
@@ -176,8 +219,8 @@ impl From<NaiveDateTime> for NormTime {
 /// use chrono::NaiveDate;
 ///
 /// assert_eq!(
-/// 	NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap() ),
-/// 	NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 0 )
+///     NormTime::from( NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap() ),
+///     NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 0 )
 /// );
 /// ```
 impl From<NaiveDate> for NormTime {
@@ -195,14 +238,13 @@ impl From<NaiveDate> for NormTime {
 /// use chrono::{NaiveDate, NaiveDateTime};
 ///
 /// assert_eq!(
-/// 	NaiveDateTime::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
-/// 	NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap()
+///     NaiveDateTime::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
+///     NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 1 ).unwrap()
 /// );
 /// ```
 impl From<NormTime> for NaiveDateTime {
 	fn from( item: NormTime ) -> Self {
-		let tstamp = NORMTIME_OFFSET + item.0;
-		NaiveDateTime::from_timestamp_opt( tstamp, 0 ).unwrap()
+		NaiveDateTime::from_timestamp_opt( item.timestamp(), 0 ).unwrap()
 	}
 }
 
@@ -215,13 +257,13 @@ impl From<NormTime> for NaiveDateTime {
 /// use chrono::NaiveDate;
 ///
 /// assert_eq!(
-/// 	NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap() ),
-/// 	NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
+///     NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap() ),
+///     NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
 /// );
 ///
 /// assert_eq!(
-/// 	NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
-/// 	NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
+///     NaiveDate::from( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap().and_hms( 0, 0, 1 ) ),
+///     NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap()
 /// );
 /// ```
 impl From<NormTime> for NaiveDate {
@@ -258,12 +300,12 @@ impl FromStr for NormTime {
 	type Err = TimeError;
 
 	fn from_str( s: &str ) -> Result<Self, Self::Err> {
-		let elems: Vec<&str> = s.split( "N" ).collect();
+		let elems: Vec<&str> = s.split( 'N' ).collect();
 		if elems.is_empty() || elems.len() > 2 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
 
-		let elems_date: Vec<&str> = elems[0].split( "-" ).collect();
+		let elems_date: Vec<&str> = elems[0].split( '-' ).collect();
 		if elems_date.len() != 3 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
@@ -276,7 +318,7 @@ impl FromStr for NormTime {
 			return Ok( NormTime( seconds ) );
 		};
 
-		let elems_time: Vec<&str> = elems_t.split( ":" ).collect();
+		let elems_time: Vec<&str> = elems_t.split( ':' ).collect();
 		if elems_time.len() != 3 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
@@ -295,8 +337,6 @@ mod normtime_serde {
 	use super::NormTime;
 
 	use std::fmt;
-
-	use serde;
 
 	impl serde::Serialize for NormTime {
 		fn serialize<S>( &self, serializer: S ) -> Result<S::Ok, S::Error>

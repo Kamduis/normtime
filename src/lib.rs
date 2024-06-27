@@ -8,10 +8,10 @@
 //!
 //! * The second is identical to the second as defined by the International System of Units (SI).
 //! * The higher order units are simple multiples of a second:
-//! 	* 1 normday   := 100 ks (ca. 1 standard day)
-//! 	* 1 normweek  :=   1 Ms (ca. 12 standard days)
-//! 	* 1 normmonth :=   3 Ms (ca. 35 standard days)
-//! 	* 1 normyear  :=  30 Ms (ca. 1 standard year, ca. 347 standard days)
+//!     * 1 normday   := 100 ks (ca. 1 standard day)
+//!     * 1 normweek  :=   1 Ms (ca. 12 standard days)
+//!     * 1 normmonth :=   3 Ms (ca. 35 standard days)
+//!     * 1 normyear  :=  30 Ms (ca. 1 standard year, ca. 347 standard days)
 //! * The 0-point of the normtime is offset from Unix time by 3'089'836'800 seconds (2068-01-01T00:00:00 standard time)
 //!
 //! It is easy to crate a `NormTime`:
@@ -57,7 +57,23 @@
 mod time;
 pub use crate::time::NormTime;
 mod duration;
-pub use crate::duration::NormTimeDelta;
+pub use crate::duration::{NormTimeDelta, Unit};
+
+
+
+
+//=============================================================================
+// Traits
+
+
+/// Providing conversion into LaTeX code.
+///
+/// This Trait is only available, if the **`tex`** feature has been enabled.
+#[cfg( feature = "tex" )]
+pub trait Latex {
+	/// Converts the entity into a LaTeX-string.
+	fn to_latex( &self ) -> String;
+}
 
 
 
@@ -70,7 +86,7 @@ pub use crate::duration::NormTimeDelta;
 const NORMTIME_OFFSET: i64 = 3_092_601_600;
 
 /// The duration of a normyear in seconds.
-const DUR_NORMYEAR: i64 = 30_000_000;
+pub const DUR_NORMYEAR: i64 = 30_000_000;
 
 /// The duration of a normmonth in seconds.
 const DUR_NORMMONTH: i64 = 3_000_000;
@@ -80,3 +96,12 @@ const DUR_NORMWEEK: i64 = 1_000_000;
 
 /// The duration of a normday in seconds.
 const DUR_NORMDAY: i64 = 100_000;
+
+/// The duration of a earth year in seconds.
+pub const DUR_TERRAYEAR: i64 = 31_557_600;
+
+/// The duration of an hour in seconds.
+const DUR_HOUR: i64 = 3600;
+
+/// The duration of a minute in seconds.
+const DUR_MINUTE: i64 = 60;
