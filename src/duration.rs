@@ -653,17 +653,7 @@ mod normtime_serde {
 		where
 			S: serde::Serializer,
 		{
-			struct FormatWrapped<'a, D: 'a> {
-				inner: &'a D,
-			}
-
-			impl<'a, D: fmt::Debug> fmt::Display for FormatWrapped<'a, D> {
-				fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
-					self.inner.fmt( f )
-				}
-			}
-
-			serializer.serialize_i64( ( *self ).secs )
+			serializer.serialize_i64( self.secs )
 		}
 	}
 
