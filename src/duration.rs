@@ -436,7 +436,7 @@ impl NormTimeDelta {
 	}
 
 	/// Returns duration as a vector of unit representations with selectable units rounded to the smallest unit provided.
-	fn to_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
+	fn as_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
 		let mut number = self.seconds();
 
 		let mut elems: Vec<(i64, Unit)> = Vec::new();
@@ -495,7 +495,7 @@ impl NormTimeDelta {
 	/// assert_eq!( delta_1.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "1 hour, 23 minutes" );
 	/// ```
 	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
-		self.to_units( units ).iter()
+		self.as_units( units ).iter()
 			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| {
 				let name_unit = v.to_string();
@@ -529,7 +529,7 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_unit( &self, units: &[Unit] ) -> String {
-		self.to_units( units ).iter()
+		self.as_units( units ).iter()
 			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex() ) )
 			.collect::<Vec<String>>()
