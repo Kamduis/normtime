@@ -338,8 +338,6 @@ mod normtime_serde {
 
 	use std::fmt;
 
-	use serde;
-
 	impl serde::Serialize for NormTime {
 		fn serialize<S>( &self, serializer: S ) -> Result<S::Ok, S::Error>
 		where
