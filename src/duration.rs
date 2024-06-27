@@ -545,8 +545,8 @@ impl NormTimeDelta {
 /// use normtime::NormTimeDelta;
 ///
 /// assert_eq!(
-/// 	NormTimeDelta::new_seconds( 1 ) + NormTimeDelta::new_seconds( 10 ),
-/// 	NormTimeDelta::new_seconds( 11 )
+///     NormTimeDelta::new_seconds( 1 ) + NormTimeDelta::new_seconds( 10 ),
+///     NormTimeDelta::new_seconds( 11 )
 /// );
 /// ```
 impl Add for NormTimeDelta {
@@ -574,8 +574,8 @@ impl Add for NormTimeDelta {
 /// use normtime::NormTimeDelta;
 ///
 /// assert_eq!(
-/// 	NormTimeDelta::new_seconds( 1 ) - NormTimeDelta::new_seconds( 10 ),
-/// 	NormTimeDelta::new_seconds( -9 )
+///     NormTimeDelta::new_seconds( 1 ) - NormTimeDelta::new_seconds( 10 ),
+///     NormTimeDelta::new_seconds( -9 )
 /// );
 /// ```
 impl Sub for NormTimeDelta {
