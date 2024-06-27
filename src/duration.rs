@@ -441,37 +441,37 @@ impl NormTimeDelta {
 
 		let mut elems: Vec<(i64, Unit)> = Vec::new();
 
-		if units.iter().find( |&x| x == &Unit::Year ).is_some() {
+		if units.iter().any( |x| x == &Unit::Year ) {
 			let val = number / DUR_NORMYEAR;
 			elems.push( ( val, Unit::Year ) );
 			number -= val * DUR_NORMYEAR;
 		}
-		if units.iter().find( |&x| x == &Unit::Month ).is_some() {
+		if units.iter().any( |x| x == &Unit::Month ) {
 			let val = number / DUR_NORMMONTH;
 			elems.push( ( val, Unit::Month ) );
 			number -= val * DUR_NORMMONTH;
 		}
-		if units.iter().find( |&x| x == &Unit::Week ).is_some() {
+		if units.iter().any( |x| x == &Unit::Week ) {
 			let val = number / DUR_NORMWEEK;
 			elems.push( ( val, Unit::Week ) );
 			number -= val * DUR_NORMWEEK;
 		}
-		if units.iter().find( |&x| x == &Unit::Day ).is_some() {
+		if units.iter().any( |x| x == &Unit::Day ) {
 			let val = number / DUR_NORMDAY;
 			elems.push( ( val, Unit::Day ) );
 			number -= val * DUR_NORMDAY;
 		}
-		if units.iter().find( |&x| x == &Unit::Hour ).is_some() {
+		if units.iter().any( |x| x == &Unit::Hour ) {
 			let val = number / DUR_HOUR;
 			elems.push( ( val, Unit::Hour ) );
 			number -= val * DUR_HOUR;
 		}
-		if units.iter().find( |&x| x == &Unit::Minute ).is_some() {
+		if units.iter().any( |x| x == &Unit::Minute ) {
 			let val = number / DUR_MINUTE;
 			elems.push( ( val, Unit::Minute ) );
 			number -= val * DUR_MINUTE;
 		}
-		if units.iter().find( |&x| x == &Unit::Second ).is_some() {
+		if units.iter().any( |x| x == &Unit::Second ) {
 			elems.push( ( number, Unit::Second ) );
 		}
 
