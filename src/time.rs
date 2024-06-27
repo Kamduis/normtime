@@ -300,12 +300,12 @@ impl FromStr for NormTime {
 	type Err = TimeError;
 
 	fn from_str( s: &str ) -> Result<Self, Self::Err> {
-		let elems: Vec<&str> = s.split( "N" ).collect();
+		let elems: Vec<&str> = s.split( 'N' ).collect();
 		if elems.is_empty() || elems.len() > 2 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
 
-		let elems_date: Vec<&str> = elems[0].split( "-" ).collect();
+		let elems_date: Vec<&str> = elems[0].split( '-' ).collect();
 		if elems_date.len() != 3 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
@@ -318,7 +318,7 @@ impl FromStr for NormTime {
 			return Ok( NormTime( seconds ) );
 		};
 
-		let elems_time: Vec<&str> = elems_t.split( ":" ).collect();
+		let elems_time: Vec<&str> = elems_t.split( ':' ).collect();
 		if elems_time.len() != 3 {
 			return Err( TimeError::ParseError( s.to_string() ) )
 		}
