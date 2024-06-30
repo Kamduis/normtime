@@ -11,7 +11,7 @@ use std::fmt;
 use std::ops::{Add, Sub};
 use std::str::FromStr;
 
-use chrono::{NaiveDate, NaiveTime, NaiveDateTime, TimeDelta};
+use chrono::{NaiveDate, NaiveTime, NaiveDateTime, TimeDelta, DateTime};
 use thiserror::Error;
 
 use crate::{NORMTIME_OFFSET, DUR_NORMDAY, DUR_NORMMONTH, DUR_NORMYEAR};
@@ -55,8 +55,8 @@ impl NormTime {
 	/// Create a new `NormTime` from Unix `timestamp`.
 	///
 	/// Returns `None` if the number of seconds would be out of range for a `chrono::NaiveDateTime` (more than ca. 262,000 years away from the zero time).
-	pub fn from_timestamp_opt( secs: i64 ) -> Option<Self> {
-		let dtime = NaiveDateTime::from_timestamp_opt( secs, 0 )?;
+	pub fn from_timestamp( secs: i64 ) -> Option<Self> {
+		let dtime = DateTime::from_timestamp( secs, 0 )?.naive_utc();
 
 		Some( Self::from( dtime ) )
 	}
@@ -145,7 +145,7 @@ impl NormTime {
 
 impl PartialEq<NaiveDateTime> for NormTime {
 	fn eq( &self, other: &NaiveDateTime ) -> bool {
-		( self.0 + NORMTIME_OFFSET ).eq( &other.timestamp() )
+		( self.0 + NORMTIME_OFFSET ).eq( &other.and_utc().timestamp() )
 	}
 }
 
@@ -206,7 +206,7 @@ impl fmt::Display for NormTime {
 /// ```
 impl From<NaiveDateTime> for NormTime {
 	fn from( item: NaiveDateTime ) -> Self {
-		Self( item.timestamp() - NORMTIME_OFFSET )
+		Self( item.and_utc().timestamp() - NORMTIME_OFFSET )
 	}
 }
 
@@ -244,7 +244,7 @@ impl From<NaiveDate> for NormTime {
 /// ```
 impl From<NormTime> for NaiveDateTime {
 	fn from( item: NormTime ) -> Self {
-		NaiveDateTime::from_timestamp_opt( item.timestamp(), 0 ).unwrap()
+		DateTime::from_timestamp( item.timestamp(), 0 ).unwrap().naive_utc()
 	}
 }
 
@@ -395,16 +395,17 @@ mod normtime_serde {
 mod tests {
 	use super::*;
 
+	#[cfg( feature = "serde" )]
 	use serde_test::{Token, assert_tokens};
 
 	#[test]
 	fn create_normtime() {
 		// Unix-time zero.
-		let time_unix_zero = NaiveDateTime::from_timestamp_opt( 0, 0 ).unwrap();
+		let time_unix_zero = DateTime::from_timestamp( 0, 0 ).unwrap().naive_utc();
 		let time_norm_zero = NaiveDate::from_ymd_opt( 2068, 1, 1 ).unwrap().and_hms_opt( 0, 0, 0 ).unwrap();
 
 		assert_eq!( NormTime::from( time_unix_zero ), time_unix_zero );
-		assert_eq!( NormTime::from_timestamp_opt( time_norm_zero.timestamp() ).unwrap(), time_norm_zero );
+		assert_eq!( NormTime::from_timestamp( time_norm_zero.and_utc().timestamp() ).unwrap(), time_norm_zero );
 		assert_eq!( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap(), time_norm_zero );
 		assert_eq!( NormTime::from_ymd_opt( 1, 0, 0 ).unwrap(), time_norm_zero + TimeDelta::seconds( 30_000_000 ) );
 	}
