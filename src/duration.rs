@@ -69,6 +69,38 @@ pub enum Unit {
 	Second,
 }
 
+impl Unit {
+	/// Representing unit as string while respecting the language provided as `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::Unit;
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// assert_eq!( Unit::Year.to_string_locale( &US_ENGLISH ), "normyears" );
+	/// assert_eq!( Unit::Second.to_string_locale( &US_ENGLISH ), "seconds" );
+	/// assert_eq!( Unit::Year.to_string_locale( &GERMAN ), "Normjahre" );
+	/// assert_eq!( Unit::Second.to_string_locale( &GERMAN ), "Sekunden" );
+	/// ```
+	#[cfg( feature = "i18n" )]
+	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		match self {
+			Self::Year =>   format!( "{}", LOCALES.lookup( locale, "normyears" ) ),
+			Self::Month =>  format!( "{}", LOCALES.lookup( locale, "normmonths" ) ),
+			Self::Week =>   format!( "{}", LOCALES.lookup( locale, "normweeks" ) ),
+			Self::Day =>    format!( "{}", LOCALES.lookup( locale, "normdays" ) ),
+			Self::Hour =>   format!( "{}", LOCALES.lookup( locale, "hours" ) ),
+			Self::Minute => format!( "{}", LOCALES.lookup( locale, "minutes" ) ),
+			Self::Second => format!( "{}", LOCALES.lookup( locale, "seconds" ) ),
+		}
+	}
+}
+
 impl FromStr for Unit {
 	type Err = ConversionError;
 
@@ -487,6 +519,23 @@ impl NormTimeDelta {
 	}
 
 	/// Returns the string representation of `self` using the language according to the provided `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &US_ENGLISH ), "1 second" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &US_ENGLISH ), "10 seconds" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &GERMAN ), "1 Sekunde" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &GERMAN ), "10 Sekunden" );
+	/// ```
 	#[cfg( feature = "i18n" )]
 	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
 		match self.secs {
@@ -516,6 +565,49 @@ impl NormTimeDelta {
 			.filter( |( k, _ )| k > &0 )
 			.map( |( k, v )| {
 				let name_unit = v.to_string();
+				let postfix = if *k == 1 {
+					name_unit[0..name_unit.len()-1].to_string()
+				} else {
+					name_unit
+				};
+				format!( "{} {}", k, postfix )
+			} )
+			.collect::<Vec<String>>()
+			.join( " " )
+	}
+
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted. The string is using the language that is provided by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day ], &US_ENGLISH ), "900 normdays" );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ), "900 normdays 1 hour" );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &US_ENGLISH ), "900 normdays 1 hour 23 minutes" );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day ], &GERMAN ), "900 Normtage" );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &GERMAN ), "900 Normtage 1 Stunde" );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &GERMAN ), "900 Normtage 1 Stunde 23 Minuten" );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!( delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ), "1 hour" );
+	/// assert_eq!( delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &US_ENGLISH ), "1 hour 23 minutes" );
+	/// assert_eq!( delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &GERMAN ), "1 Stunde" );
+	/// assert_eq!( delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &GERMAN ), "1 Stunde 23 Minuten" );
+	/// ```
+	#[cfg( feature = "i18n" )]
+	pub fn to_string_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
+		self.as_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
+			.map( |( k, v )| {
+				let name_unit = v.to_string_locale( locale );
 				let postfix = if *k == 1 {
 					name_unit[0..name_unit.len()-1].to_string()
 				} else {
@@ -770,9 +862,6 @@ mod tests {
 
 	use serde_test::{Token, assert_tokens};
 
-	#[cfg( feature = "i18n" )]
-	use unic_langid::langid;
-
 	#[test]
 	fn test_last_digit() {
 		assert_eq!( last_digit( 5 ), 5 );
@@ -821,21 +910,16 @@ mod tests {
 	}
 
 	#[test]
-	fn display_time_delta_display() {
+	fn time_delta_display() {
 		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string(), "1 second" );
 		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string(), "10 seconds" );
 	}
 
 	#[test]
-	#[cfg( feature = "i18n" )]
-	fn display_time_delta_i18n() {
-		const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
-		const GERMAN: LanguageIdentifier = langid!( "de-DE" );
-
-		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &US_ENGLISH ), "1 second" );
-		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &US_ENGLISH ), "10 seconds" );
-		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &GERMAN ), "1 Sekunde" );
-		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &GERMAN ), "10 Sekunden" );
+	#[cfg( feature = "tex" )]
+	fn time_delta_latex() {
+		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_latex(), r"\qty{1}{\second}" );
+		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_latex(), r"\qty{10}{\second}" );
 	}
 
 	#[test]
