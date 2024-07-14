@@ -14,10 +14,18 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
+#[cfg( feature = "i18n" )]
+use fluent_templates::Loader;
+#[cfg( feature = "i18n" )]
+use unic_langid::LanguageIdentifier;
+
 #[cfg( feature = "tex" )]
 use crate::Latex;
 
 use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_TERRAYEAR, DUR_HOUR, DUR_MINUTE};
+
+#[cfg( feature = "i18n" )]
+use crate::LOCALES;
 
 
 
@@ -478,6 +486,15 @@ impl NormTimeDelta {
 		elems
 	}
 
+	/// Returns the string representation of `self` using the language according to the provided `locale`.
+	#[cfg( feature = "i18n" )]
+	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		match self.secs {
+			1 => format!( "{} {}", self.secs, LOCALES.lookup( locale, "second" ) ),
+			_ => format!( "{} {}", self.secs, LOCALES.lookup( locale, "seconds" ) ),
+		}
+	}
+
 	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted.
 	///
 	/// # Example
@@ -619,7 +636,10 @@ impl Sum<NormTimeDelta> for NormTimeDelta {
 /// ```
 impl fmt::Display for NormTimeDelta {
 	fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
-		write!( f, "{} seconds", self.secs )
+		match self.secs {
+			1 => write!( f, "{} second", self.secs ),
+			_ => write!( f, "{} seconds", self.secs ),
+		}
 	}
 }
 
@@ -750,6 +770,9 @@ mod tests {
 
 	use serde_test::{Token, assert_tokens};
 
+	#[cfg( feature = "i18n" )]
+	use unic_langid::langid;
+
 	#[test]
 	fn test_last_digit() {
 		assert_eq!( last_digit( 5 ), 5 );
@@ -795,6 +818,24 @@ mod tests {
 
 		assert_eq!( items.iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
 		assert_eq!( items.into_iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
+	}
+
+	#[test]
+	fn display_time_delta_display() {
+		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string(), "1 second" );
+		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string(), "10 seconds" );
+	}
+
+	#[test]
+	#[cfg( feature = "i18n" )]
+	fn display_time_delta_i18n() {
+		const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+		const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+
+		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &US_ENGLISH ), "1 second" );
+		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &US_ENGLISH ), "10 seconds" );
+		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &GERMAN ), "1 Sekunde" );
+		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &GERMAN ), "10 Sekunden" );
 	}
 
 	#[test]
