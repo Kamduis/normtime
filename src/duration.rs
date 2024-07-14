@@ -20,7 +20,7 @@ use fluent_templates::Loader;
 use unic_langid::LanguageIdentifier;
 
 #[cfg( feature = "tex" )]
-use crate::Latex;
+use crate::{Latex, LatexSym};
 #[cfg( feature = "tex" )]
 use crate::TexOptions;
 
@@ -208,13 +208,16 @@ impl Latex for Unit {
 	fn to_latex_locale( &self, locale: &LanguageIdentifier, _options: &TexOptions ) -> String {
 		self.to_string_locale( locale )
 	}
+}
 
+#[cfg( feature = "tex" )]
+impl LatexSym for Unit {
 	/// Represent unit as symbol by using LaTeX unit commands.
 	///
 	/// # Example
 	///
 	/// ```
-	/// use normtime::{Latex, TexOptions};
+	/// use normtime::{Latex, LatexSym, TexOptions};
 	/// use normtime::Unit;
 	///
 	/// assert_eq!( Unit::Year.to_latex_sym( &TexOptions::new() ), r"\normyear" );
@@ -866,7 +869,6 @@ impl NormTimeDelta {
 	/// # Example
 	///
 	/// ```
-	/// use normtime::Latex;
 	/// use normtime::{NormTimeDelta, Unit};
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
@@ -1050,13 +1052,16 @@ impl Latex for NormTimeDelta {
 			_ => format!( "{}~{}", self.secs, LOCALES.lookup( locale, "seconds" ) ),
 		}
 	}
+}
 
+#[cfg( feature = "tex" )]
+impl LatexSym for NormTimeDelta {
 	/// Returns a string representing the duration as latex commands with symbols using the LaTeX package `{siunitx}`.
 	///
 	/// # Example
 	///
 	/// ```
-	/// use normtime::{Latex, TexOptions};
+	/// use normtime::{LatexSym, TexOptions};
 	/// use normtime::NormTimeDelta;
 	///
 	/// assert_eq!(
