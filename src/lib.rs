@@ -46,6 +46,7 @@
 //! ```
 //!
 //! # Optional Features
+//! * **i18n** Enables internationalization support using `fluent_templates`.
 //! * **serde** Enables `serde` support.
 
 
@@ -105,3 +106,21 @@ const DUR_HOUR: i64 = 3600;
 
 /// The duration of a minute in seconds.
 const DUR_MINUTE: i64 = 60;
+
+
+
+
+//=============================================================================
+// Internationalization
+
+
+#[cfg( feature = "i18n" )]
+fluent_templates::static_loader! {
+	static LOCALES = {
+		// The directory of localisations and fluent resources.
+		locales: "./locales",
+
+		// The language to falback on if something is not present.
+		fallback_language: "en-US",
+	};
+}
