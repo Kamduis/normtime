@@ -48,12 +48,17 @@
 //! # Optional Features
 //! * **i18n** Enables internationalization support using `fluent_templates`.
 //! * **serde** Enables `serde` support.
+//! * **tex** Enables LaTeX support.
 
 
 
 
 //=============================================================================
 // Crates
+
+
+#[cfg( all( feature = "i18n", feature = "tex" ) )]
+use unic_langid::LanguageIdentifier;
 
 mod time;
 pub use crate::time::NormTime;
@@ -73,7 +78,14 @@ pub use crate::duration::{NormTimeDelta, Unit};
 #[cfg( feature = "tex" )]
 pub trait Latex {
 	/// Converts the entity into a LaTeX-string.
-	fn to_latex( &self ) -> String;
+	fn to_latex( &self, options: &TexOptions ) -> String;
+
+	/// Converts the entity into a LaTeX-string translating it into the language provided by `locale`.
+	#[cfg( feature = "i18n" )]
+	fn to_latex_locale( &self, locale: &LanguageIdentifier, options: &TexOptions ) -> String;
+
+	/// Converts the entity into a LaTeX-string displaying symbols instead of written units.
+	fn to_latex_sym( &self, options: &TexOptions ) -> String;
 }
 
 
@@ -106,6 +118,35 @@ const DUR_HOUR: i64 = 3600;
 
 /// The duration of a minute in seconds.
 const DUR_MINUTE: i64 = 60;
+
+
+
+
+//=============================================================================
+// Structs
+
+
+/// Representing options to LaTeX commands provided by the `Latex` trait.
+///
+/// **Note:** This struct is only available, if the **`tex`** feature has been enabled.
+///
+/// TODO: This is currently not being used, but will provide the possibility to fine-tune the TeX output. It is added to keep the function signatures stable.
+#[cfg( feature = "tex" )]
+#[derive( PartialEq, Default, Debug )]
+pub struct TexOptions {}
+
+#[cfg( feature = "tex" )]
+impl TexOptions {
+	// Create a new `Options` without an option active. Is identical to `none()`.
+	pub fn new() -> Self {
+		Self::default()
+	}
+
+	// Create a new `Options` without an option active.
+	pub fn none() -> Self {
+		Self::default()
+	}
+}
 
 
 
