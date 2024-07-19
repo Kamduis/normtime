@@ -1,5 +1,7 @@
 <div align="center" class="rustdoc-hidden">
+
 # normtime
+
 </div>
 
 This Rust crate supports tracking time as "Normtime".
