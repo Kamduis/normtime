@@ -2,8 +2,13 @@
 name = "normtime"
 version = "0.3.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Victor von Rhein"]
+description = "Tracking time as 'Normtime'. Normtime aspires to represent time in a 'metric' way. A 'Normday' has a duration of exact 100'000 seconds (27 h, 46 min, 40 s), and is therefore a couple of hours longer than a standard day with 24 hours, but is roughly equivalent."
+readme = "README.md"
+repository = "https://github.com/Kamduis/normtime"
+license = "MIT OR Apache-2.0"
+keywords = ["date", "time"]
+categories = ["date-and-time"]
 
 [features]
 i18n = ["dep:fluent-templates", "dep:unic-langid"]
