@@ -14,10 +14,20 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
+#[cfg( feature = "i18n" )]
+use fluent_templates::Loader;
+#[cfg( feature = "i18n" )]
+use unic_langid::LanguageIdentifier;
+
 #[cfg( feature = "tex" )]
-use crate::Latex;
+use crate::{Latex, LatexSym};
+#[cfg( feature = "tex" )]
+use crate::TexOptions;
 
 use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_TERRAYEAR, DUR_HOUR, DUR_MINUTE};
+
+#[cfg( feature = "i18n" )]
+use crate::LOCALES;
 
 
 
@@ -59,6 +69,62 @@ pub enum Unit {
 	Hour,
 	Minute,
 	Second,
+}
+
+impl Unit {
+	/// Representing unit as string, translating the unit into the language specified by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::Unit;
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// assert_eq!( Unit::Year.to_string_locale( &US_ENGLISH ), "normyears" );
+	/// assert_eq!( Unit::Second.to_string_locale( &US_ENGLISH ), "seconds" );
+	/// assert_eq!( Unit::Year.to_string_locale( &GERMAN ), "Normjahre" );
+	/// assert_eq!( Unit::Second.to_string_locale( &GERMAN ), "Sekunden" );
+	/// ```
+	#[cfg( feature = "i18n" )]
+	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		match self {
+			Self::Year =>   format!( "{}", LOCALES.lookup( locale, "normyears" ) ),
+			Self::Month =>  format!( "{}", LOCALES.lookup( locale, "normmonths" ) ),
+			Self::Week =>   format!( "{}", LOCALES.lookup( locale, "normweeks" ) ),
+			Self::Day =>    format!( "{}", LOCALES.lookup( locale, "normdays" ) ),
+			Self::Hour =>   format!( "{}", LOCALES.lookup( locale, "hours" ) ),
+			Self::Minute => format!( "{}", LOCALES.lookup( locale, "minutes" ) ),
+			Self::Second => format!( "{}", LOCALES.lookup( locale, "seconds" ) ),
+		}
+	}
+
+	/// Represent unit as symbol.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::Unit;
+	///
+	/// assert_eq!( Unit::Year.to_string_sym(), "y" );
+	/// assert_eq!( Unit::Second.to_string_sym(), "s" );
+	/// ```
+	pub fn to_string_sym( &self ) -> String {
+		let res = match self {
+			Self::Year => "y",
+			Self::Month => "m",
+			Self::Week => "w",
+			Self::Day => "d",
+			Self::Hour => "h",
+			Self::Minute => "min",
+			Self::Second => "s",
+		};
+
+		res.to_string()
+	}
 }
 
 impl FromStr for Unit {
@@ -106,20 +172,58 @@ impl fmt::Display for Unit {
 	}
 }
 
-/// Represent unit as LaTeX unit command.
-///
-/// # Example
-///
-/// ```
-/// use normtime::Latex;
-/// use normtime::Unit;
-///
-/// assert_eq!( Unit::Year.to_latex(), r"\normyear" );
-/// assert_eq!( Unit::Second.to_latex(), r"\second" );
-/// ```
 #[cfg( feature = "tex" )]
 impl Latex for Unit {
-	fn to_latex( &self ) -> String {
+	/// Represent unit to be usable with LaTeX.
+	///
+	/// **Note:** This is identical to `.to_string()`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{Latex, TexOptions};
+	/// use normtime::Unit;
+	///
+	/// assert_eq!( Unit::Year.to_latex( &TexOptions::new() ), "normyears" );
+	/// assert_eq!( Unit::Second.to_latex( &TexOptions::new() ), "seconds" );
+	/// ```
+	fn to_latex( &self, _options: &TexOptions ) -> String {
+		self.to_string()
+	}
+
+	/// Represent unit to be usable with LaTeX, translating the unit into the language specified by `locale`.
+	///
+	/// **Note:** This is identical to `.to_string_locale()`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{Latex, TexOptions};
+	/// use normtime::Unit;
+	///
+	/// assert_eq!( Unit::Year.to_latex( &TexOptions::new() ), r"normyears" );
+	/// assert_eq!( Unit::Second.to_latex( &TexOptions::new() ), r"seconds" );
+	/// ```
+	#[cfg( feature = "i18n" )]
+	fn to_latex_locale( &self, locale: &LanguageIdentifier, _options: &TexOptions ) -> String {
+		self.to_string_locale( locale )
+	}
+}
+
+#[cfg( feature = "tex" )]
+impl LatexSym for Unit {
+	/// Represent unit as symbol by using LaTeX unit commands.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{Latex, LatexSym, TexOptions};
+	/// use normtime::Unit;
+	///
+	/// assert_eq!( Unit::Year.to_latex_sym( &TexOptions::new() ), r"\normyear" );
+	/// assert_eq!( Unit::Second.to_latex_sym( &TexOptions::new() ), r"\second" );
+	/// ```
+	fn to_latex_sym( &self, _options: &TexOptions ) -> String {
 		let res = match self {
 			Self::Year => r"\normyear",
 			Self::Month => r"\normmonth",
@@ -478,6 +582,45 @@ impl NormTimeDelta {
 		elems
 	}
 
+	/// Returns a string providing the duration of `self` in seconds translated to the language provided by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &US_ENGLISH ), "1 second" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &US_ENGLISH ), "10 seconds" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &GERMAN ), "1 Sekunde" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &GERMAN ), "10 Sekunden" );
+	/// ```
+	#[cfg( feature = "i18n" )]
+	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		match self.secs {
+			1 => format!( "{} {}", self.secs, LOCALES.lookup( locale, "second" ) ),
+			_ => format!( "{} {}", self.secs, LOCALES.lookup( locale, "seconds" ) ),
+		}
+	}
+
+	/// Returns the duration as string with symbol as unit.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_sym(), "1 s" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_sym(), "10 s" );
+	/// ```
+	pub fn to_string_sym( &self ) -> String {
+		format!( r"{} s", self.secs )
+	}
+
 	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted.
 	///
 	/// # Example
@@ -487,12 +630,18 @@ impl NormTimeDelta {
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
 	/// assert_eq!( delta.to_string_unit( &[ Unit::Day ] ), "900 normdays" );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays, 1 hour" );
-	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "900 normdays, 1 hour, 23 minutes" );
+	/// assert_eq!( delta.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "900 normdays 1 hour" );
+	/// assert_eq!(
+	///     delta.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     "900 normdays 1 hour 23 minutes"
+	/// );
 	///
 	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
 	/// assert_eq!( delta_1.to_string_unit( &[ Unit::Day, Unit::Hour ] ), "1 hour" );
-	/// assert_eq!( delta_1.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), "1 hour, 23 minutes" );
+	/// assert_eq!(
+	///     delta_1.to_string_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     "1 hour 23 minutes"
+	/// );
 	/// ```
 	pub fn to_string_unit( &self, units: &[Unit] ) -> String {
 		self.as_units( units ).iter()
@@ -507,33 +656,252 @@ impl NormTimeDelta {
 				format!( "{} {}", k, postfix )
 			} )
 			.collect::<Vec<String>>()
-			.join( ", " )
+			.join( " " )
 	}
 
-	/// Returns a LaTeX-string representation of `self` with selectable units rounded to the smallest unit provided.
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted.
 	///
 	/// # Example
 	///
 	/// ```
-	/// use normtime::Latex;
 	/// use normtime::{NormTimeDelta, Unit};
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
-	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day ] ), r"\qty{900}{\normday}" );
-	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), r"\qty{900}{\normday}, \qty{1}{\hour}" );
-	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), r"\qty{900}{\normday}, \qty{1}{\hour}, \qty{23}{\minute}" );
+	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day ] ), "900~normdays" );
+	/// assert_eq!( delta.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), "900~normdays 1~hour" );
+	/// assert_eq!(
+	///     delta.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     "900~normdays 1~hour 23~minutes"
+	/// );
 	///
 	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
-	/// assert_eq!( delta_1.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), r"\qty{1}{\hour}" );
-	/// assert_eq!( delta_1.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ), r"\qty{1}{\hour}, \qty{23}{\minute}" );
+	/// assert_eq!( delta_1.to_latex_unit( &[ Unit::Day, Unit::Hour ] ), "1~hour" );
+	/// assert_eq!(
+	///     delta_1.to_latex_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     "1~hour 23~minutes"
+	/// );
 	/// ```
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_unit( &self, units: &[Unit] ) -> String {
 		self.as_units( units ).iter()
 			.filter( |( k, _ )| k > &0 )
-			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex() ) )
+			.map( |( k, v )| {
+				let name_unit = v.to_string();
+				let postfix = if *k == 1 {
+					name_unit[0..name_unit.len()-1].to_string()
+				} else {
+					name_unit
+				};
+				format!( "{}~{}", k, postfix )
+			} )
 			.collect::<Vec<String>>()
-			.join( ", " )
+			.join( " " )
+	}
+
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted. The string is using the language that is provided by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day ], &US_ENGLISH ), "900 normdays" );
+	/// assert_eq!(
+	///     delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
+	///     "900 normdays 1 hour"
+	/// );
+	/// assert_eq!(
+	///     delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &US_ENGLISH ),
+	///     "900 normdays 1 hour 23 minutes"
+	/// );
+	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day ], &GERMAN ), "900 Normtage" );
+	/// assert_eq!(
+	///     delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &GERMAN ),
+	///     "900 Normtage 1 Stunde"
+	/// );
+	/// assert_eq!(
+	///     delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &GERMAN ),
+	///     "900 Normtage 1 Stunde 23 Minuten"
+	/// );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!(
+	///     delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
+	///     "1 hour"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &US_ENGLISH ),
+	///     "1 hour 23 minutes"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &GERMAN ),
+	///     "1 Stunde"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &GERMAN ),
+	///     "1 Stunde 23 Minuten"
+	/// );
+	/// ```
+	#[cfg( feature = "i18n" )]
+	pub fn to_string_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
+		self.as_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
+			.map( |( k, v )| {
+				let name_unit = v.to_string_locale( locale );
+				let postfix = if *k == 1 {
+					name_unit[0..name_unit.len()-1].to_string()
+				} else {
+					name_unit
+				};
+				format!( "{} {}", k, postfix )
+			} )
+			.collect::<Vec<String>>()
+			.join( " " )
+	}
+
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted. This string is intended to be used by LaTeX. The string is translated into the language that is provided by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_latex_unit_locale( &[ Unit::Day ], &US_ENGLISH ), "900~normdays" );
+	/// assert_eq!(
+	///     delta.to_latex_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
+	///     "900~normdays 1~hour"
+	/// );
+	/// assert_eq!(
+	///     delta.to_latex_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &US_ENGLISH ),
+	///     "900~normdays 1~hour 23~minutes"
+	/// );
+	/// assert_eq!( delta.to_latex_unit_locale( &[ Unit::Day ], &GERMAN ), "900~Normtage" );
+	/// assert_eq!(
+	///     delta.to_latex_unit_locale( &[ Unit::Day, Unit::Hour ], &GERMAN ),
+	///     "900~Normtage 1~Stunde"
+	/// );
+	/// assert_eq!(
+	///     delta.to_latex_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &GERMAN ),
+	///     "900~Normtage 1~Stunde 23~Minuten"
+	/// );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!(
+	///     delta_1.to_latex_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
+	///     "1~hour"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_latex_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &US_ENGLISH ),
+	///     "1~hour 23~minutes"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_latex_unit_locale( &[ Unit::Day, Unit::Hour ], &GERMAN ),
+	///     "1~Stunde"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_latex_unit_locale( &[ Unit::Day, Unit::Hour, Unit::Minute ], &GERMAN ),
+	///     "1~Stunde 23~Minuten"
+	/// );
+	/// ```
+	#[cfg( all( feature = "i18n", feature = "tex" ) )]
+	pub fn to_latex_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
+		self.as_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
+			.map( |( k, v )| {
+				let name_unit = v.to_string_locale( locale );
+				let postfix = if *k == 1 {
+					name_unit[0..name_unit.len()-1].to_string()
+				} else {
+					name_unit
+				};
+				format!( "{}~{}", k, postfix )
+			} )
+			.collect::<Vec<String>>()
+			.join( " " )
+	}
+
+	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. The units are expressed as symbols.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_sym_unit( &[ Unit::Day ] ), "900 d" );
+	/// assert_eq!( delta.to_string_sym_unit( &[ Unit::Day, Unit::Hour ] ), "900 d 1 h" );
+	/// assert_eq!(
+	///     delta.to_string_sym_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     "900 d 1 h 23 min"
+	/// );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!( delta_1.to_string_sym_unit( &[ Unit::Day, Unit::Hour ] ), "1 h" );
+	/// assert_eq!(
+	///     delta_1.to_string_sym_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     "1 h 23 min"
+	/// );
+	/// ```
+	pub fn to_string_sym_unit( &self, units: &[Unit] ) -> String {
+		self.as_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
+			.map( |( k, v )| format!( "{} {}", k, v.to_string_sym() ) )
+			.collect::<Vec<String>>()
+			.join( " " )
+	}
+
+	/// Returns a LaTeX-string representation of `self` with selectable units rounded to the smallest unit provided. The units are expressed as symbols using the LaTeX `{siunitx}` package.
+	///
+	/// This method is only available when the **tex** feature has been activated.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!(
+	///     delta.to_latex_sym_unit( &[ Unit::Day ] ),
+	///     r"\qty{900}{\normday}"
+	/// );
+	/// assert_eq!(
+	///     delta.to_latex_sym_unit( &[ Unit::Day, Unit::Hour ] ),
+	///     r"\qty{900}{\normday}\,\qty{1}{\hour}"
+	/// );
+	/// assert_eq!(
+	///     delta.to_latex_sym_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     r"\qty{900}{\normday}\,\qty{1}{\hour}\,\qty{23}{\minute}"
+	/// );
+	///
+	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!(
+	///     delta_1.to_latex_sym_unit( &[ Unit::Day, Unit::Hour ] ),
+	///     r"\qty{1}{\hour}"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_latex_sym_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
+	///     r"\qty{1}{\hour}\,\qty{23}{\minute}"
+	/// );
+	/// ```
+	#[cfg( feature = "tex" )]
+	pub fn to_latex_sym_unit( &self, units: &[Unit] ) -> String {
+		self.as_units( units ).iter()
+			.filter( |( k, _ )| k > &0 )
+			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex_sym( &TexOptions::new() ) ) )
+			.collect::<Vec<String>>()
+			.join( "\\," )
 	}
 }
 
@@ -619,24 +987,94 @@ impl Sum<NormTimeDelta> for NormTimeDelta {
 /// ```
 impl fmt::Display for NormTimeDelta {
 	fn fmt( &self, f: &mut fmt::Formatter<'_> ) -> fmt::Result {
-		write!( f, "{} seconds", self.secs )
+		match self.secs {
+			1 => write!( f, "{} second", self.secs ),
+			_ => write!( f, "{} seconds", self.secs ),
+		}
 	}
 }
 
-/// Returning `self` as LaTeX string using the `siunitx`-LaTeX-package.
-///
-/// # Example
-///
-/// ```
-/// use normtime::Latex;
-/// use normtime::NormTimeDelta;
-///
-/// assert_eq!( NormTimeDelta::new_seconds( 100 ).to_latex(), r"\qty{100}{\second}" );
-/// assert_eq!( NormTimeDelta::new_days( 1 ).to_latex(), r"\qty{100000}{\second}" );
-/// ```
 #[cfg( feature = "tex" )]
 impl Latex for NormTimeDelta {
-	fn to_latex( &self ) -> String {
+	/// Returning `self` as LaTeX string.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{Latex, TexOptions};
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_latex( &TexOptions::new() ), "1~second" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 100 ).to_latex( &TexOptions::new() ), "100~seconds" );
+	/// assert_eq!( NormTimeDelta::new_days( 1 ).to_latex( &TexOptions::new() ), "100000~seconds" );
+	/// ```
+	fn to_latex( &self, _options: &TexOptions ) -> String {
+		match self.secs {
+			1 => format!( "{}~second", self.secs ),
+			_ => format!( "{}~seconds", self.secs ),
+		}
+	}
+
+	/// Returns a string providing the duration of `self` in seconds translated to the language provided by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::{Latex, TexOptions};
+	/// use normtime::NormTimeDelta;
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 1 ).to_latex_locale( &US_ENGLISH, &TexOptions::new() ),
+	///     "1~second"
+	/// );
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 10 ).to_latex_locale( &US_ENGLISH, &TexOptions::new() ),
+	///     "10~seconds"
+	/// );
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 1 ).to_latex_locale( &GERMAN, &TexOptions::new() ),
+	///     "1~Sekunde"
+	/// );
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 10 ).to_latex_locale( &GERMAN, &TexOptions::new() ),
+	///     "10~Sekunden"
+	/// );
+	/// ```
+	#[cfg( all( feature = "i18n", feature = "tex" ) )]
+	fn to_latex_locale( &self, locale: &LanguageIdentifier, _options: &TexOptions ) -> String {
+		match self.secs {
+			1 => format!( "{}~{}", self.secs, LOCALES.lookup( locale, "second" ) ),
+			_ => format!( "{}~{}", self.secs, LOCALES.lookup( locale, "seconds" ) ),
+		}
+	}
+}
+
+#[cfg( feature = "tex" )]
+impl LatexSym for NormTimeDelta {
+	/// Returns a string representing the duration as latex commands with symbols using the LaTeX package `{siunitx}`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::{LatexSym, TexOptions};
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 1 ).to_latex_sym( &TexOptions::new() ),
+	///     r"\qty{1}{\second}"
+	/// );
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 10 ).to_latex_sym( &TexOptions::new() ),
+	///     r"\qty{10}{\second}"
+	/// );
+	/// ```
+	#[cfg( feature = "tex" )]
+	fn to_latex_sym( &self, _options: &TexOptions ) -> String {
 		format!( r"\qty{{{}}}{{\second}}", self.secs )
 	}
 }
@@ -748,6 +1186,7 @@ mod normtime_serde {
 mod tests {
 	use super::*;
 
+	#[cfg( feature = "serde" )]
 	use serde_test::{Token, assert_tokens};
 
 	#[test]
@@ -795,6 +1234,12 @@ mod tests {
 
 		assert_eq!( items.iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
 		assert_eq!( items.into_iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
+	}
+
+	#[test]
+	fn time_delta_display() {
+		assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string(), "1 second" );
+		assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string(), "10 seconds" );
 	}
 
 	#[test]
