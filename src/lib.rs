@@ -1,3 +1,10 @@
+// Replace crate links with internal links when creating documentation with `cargo`.
+//! [`NormTime`]: crate::NormTime
+//! [`NormTimeDelta`]: crate::NormTimeDelta
+//! [`DateTime`]: chrono::DateTime
+//! [`NaiveDateTime`]: chrono::NaiveDateTime
+//! [`fluent_templates`]: fluent_templates
+//! [`serde`]: serde
 // File links are not supported by rustdoc.
 //! [LICENSE-APACHE]: https://github.com/Kamduis/normtime/blob/master/LICENSE-APACHE
 //! [LICENSE-MIT]: https://github.com/Kamduis/normtime/blob/master/LICENSE-MIT

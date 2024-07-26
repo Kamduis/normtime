@@ -1,5 +1,7 @@
 <div align="center" class="rustdoc-hidden">
+
 # normtime
+
 </div>
 
 This Rust crate supports tracking time as "Normtime".
@@ -7,7 +9,7 @@ This Rust crate supports tracking time as "Normtime".
 Normtime aspires to represent time in a "metric" way. The goal is to have rough similarities to the standard time, but not being equal. A "Normday" has a duration of exact 100'000 seconds (27 h, 46 min, 40 s), and is therefore a couple of hours longer than a standard day with 24 hours, but at least it is roughly equivalent.
 
 Normtime has the following attributes:
-* The second is identical to the second as defined by the [International System of Units (SI)][].
+* The second is identical to the second as defined by the [International System of Units (SI)][1].
 * The higher order units are simple multiples of a second:
 
 	| Normtime        | Seconds | Standard Time                               |
@@ -35,7 +37,7 @@ normtime = "x.y.z"
 
 ## Example
 
-A [`NormTime`] instance can be created in a similar fashion to the [`DateTime`][chrono::DateTime] instance of the [`chrono`][] package:
+A [`NormTime`][] instance can be created in a similar fashion to the [`DateTime`][] instance of the [`chrono`][] package:
 ```rust
 use normtime::NormTime;
 
@@ -43,7 +45,7 @@ let ntime = NormTime::from_ymd_opt( 123, 4, 5 ).unwrap().and_hms( 6, 7, 8 );
 assert_eq!( ntime.to_string(), "0123-04-05N06:07:08" );
 ```
 
-[`NormTime`] can be converted to [`chrono::NaiveDateTime`](https://docs.rs/chrono/latest/chrono/struct.NaiveDateTime.html) and the other way around:
+[`NormTime`][] can be converted to [`NaiveDateTime`][] and the other way around:
 ```rust
 use chrono::{NaiveDateTime, NaiveDate};
 use normtime::NormTime;
@@ -55,7 +57,7 @@ assert_eq!( NaiveDateTime::from( ntime ), ndt );
 assert_eq!( NormTime::from( ndt ), ntime );
 ```
 
-Durations between [`NormTime`]s are measured using [`NormTimeDelta`].
+Durations between [`NormTime`][]s are measured using [`NormTimeDelta`][].
 ```rust
 use normtime::{NormTime, NormTimeDelta};
 
@@ -67,9 +69,9 @@ assert_eq!( ntime_stop - ntime_start, NormTimeDelta::new_seconds( 100_000 ) );
 
 ## Optional Features
 
-* **i18n** Enables internationalization support using [`fluent_templates`][].
-* **serde** Enables [`serde`][] support.
-* **tex** Enables LaTeX support.
+* **i18n:** Enables internationalization support using [`fluent_templates`][].
+* **serde:** Enables [`serde`][] support.
+* **tex:** Enables LaTeX support.
 
 
 ## License
@@ -85,8 +87,12 @@ Licensed under either of
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
 
-[International System of Units (SI)]: https://www.bipm.org/documents/20126/41483022/SI-Brochure-9-EN.pdf
+[1]: https://www.bipm.org/documents/20126/41483022/SI-Brochure-9-EN.pdf
+[`NormTime`]: https://docs.rs/normtime/latest/struct.NormTime.html
+[`NormTimeDelta`]: https://docs.rs/normtime/latest/struct.NormTimeDelta.html
+[`DateTime`]: https://docs.rs/chrono/latest/chrono/struct.DateTime.html
 [`chrono`]: https://docs.rs/chrono/latest/chrono/
+[`NaiveDateTime`]: https://docs.rs/chrono/latest/chrono/struct.NaiveDateTime.html
 [`fluent_templates`]: https://docs.rs/fluent-templates/latest/fluent_templates/
 [`serde`]: https://docs.rs/serde/latest/serde/
 [LICENSE-APACHE]: LICENSE-APACHE
