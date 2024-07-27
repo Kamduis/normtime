@@ -329,7 +329,47 @@ impl NormTimeDelta {
 		}
 	}
 
+	/// Creates a new `NormTimeDelta` that has a duration of `minutes`.
+	///
+	/// **Note:** If the duration cannot be expressed in `i64` seconds, this method will panic.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_minutes( 0 ), NormTimeDelta::ZERO );
+	/// assert_eq!( NormTimeDelta::new_minutes( 1 ), NormTimeDelta::new_seconds( 60 ) );
+	/// ```
+	pub fn new_minutes( minutes: i64 ) -> Self {
+		Self {
+			secs: minutes * DUR_MINUTE,
+			nanos: 0,
+		}
+	}
+
+	/// Creates a new `NormTimeDelta` that has a duration of `hours`.
+	///
+	/// **Note:** If the duration cannot be expressed in `i64` seconds, this method will panic.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_hours( 0 ), NormTimeDelta::ZERO );
+	/// assert_eq!( NormTimeDelta::new_hours( 1 ), NormTimeDelta::new_seconds( 3600 ) );
+	/// ```
+	pub fn new_hours( hours: i64 ) -> Self {
+		Self {
+			secs: hours * DUR_HOUR,
+			nanos: 0,
+		}
+	}
+
 	/// Creates a new `NormTimeDelta` that has a duration of `days` normdays.
+	///
+	/// **Note:** If the duration cannot be expressed in `i64` seconds, this method will panic.
 	///
 	/// # Example
 	///
@@ -347,6 +387,8 @@ impl NormTimeDelta {
 
 	/// Creates a new `NormTimeDelta` that has a duration of `years` normyears.
 	///
+	/// **Note:** If the duration cannot be expressed in `i64` seconds, this method will panic.
+	///
 	/// # Example
 	///
 	/// ```
@@ -361,6 +403,8 @@ impl NormTimeDelta {
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `years` earth years.
+	///
+	/// **Note:** If the duration cannot be expressed in `i64` seconds, this method will panic.
 	///
 	/// # Example
 	///
