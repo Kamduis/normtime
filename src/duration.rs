@@ -271,6 +271,8 @@ fn last_digit( number: u64 ) -> u64 {
 /// Time duration with second precision.
 ///
 /// `NormTimeDelta` differs from e.g. `chrono::TimeDelta`, that it uses normdays, normweeks etc. that have a different duration than standard days etc. The duration of a second is identical, though.
+///
+/// The range is restricted between `-i64::MAX` and `i64::MAX` *milliseconds*.
 #[derive( Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Debug )]
 pub struct NormTimeDelta{
 	pub(super) secs: i64,
@@ -296,7 +298,7 @@ impl NormTimeDelta {
 		nanos: ( i64::MAX % MILLIS_PER_SEC ) as i32 * NANOS_PER_MILLI,
 	};
 
-	/// Creates a new `NormTimeDelta` that has a duration of `secs` + `nanos`.
+	/// Creates a new `NormTimeDelta` that has a duration of `secs` + `nanos`. Returns `None` if the duration is not within `-i64::MAX` and `i64::MAX` *milliseconds* or if `nanos` ≥ 1'000'000'000.
 	///
 	/// # Example
 	///
@@ -321,23 +323,6 @@ impl NormTimeDelta {
 		} )
 	}
 
-	/// Returns the subsecond fraction of `NormTimeDelta` as number of nanoseconds.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use normtime::NormTimeDelta;
-	///
-	/// assert_eq!( NormTimeDelta::new( 1, 10 ).unwrap().subsec_nanos(), 10 );
-	/// ```
-	pub fn subsec_nanos( &self ) -> i32 {
-		if self.secs < 0 && self.nanos > 0 {
-			self.nanos - NANOS_PER_SEC
-		} else {
-			self.nanos
-		}
-	}
-
 	/// Creates a new `NormTimeDelta` that has a duration of `secs`.
 	///
 	/// # Example
@@ -348,10 +333,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_seconds( 0 ), NormTimeDelta::ZERO );
 	/// ```
 	pub fn new_seconds( secs: i64 ) -> Self {
-		Self {
-			secs,
-			nanos: 0,
-		}
+		Self::new( secs, 0 ).expect( "NormTimeDelta::new_seconds is out of bounds" )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `minutes`.
@@ -367,10 +349,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_minutes( 1 ), NormTimeDelta::new_seconds( 60 ) );
 	/// ```
 	pub fn new_minutes( minutes: i64 ) -> Self {
-		Self {
-			secs: minutes * DUR_MINUTE,
-			nanos: 0,
-		}
+		Self::new( minutes * DUR_MINUTE, 0 ).expect( "NormTimeDelta::new_minutes is out of bounds" )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `hours`.
@@ -386,10 +365,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_hours( 1 ), NormTimeDelta::new_seconds( 3600 ) );
 	/// ```
 	pub fn new_hours( hours: i64 ) -> Self {
-		Self {
-			secs: hours * DUR_HOUR,
-			nanos: 0,
-		}
+		Self::new( hours * DUR_HOUR, 0 ).expect( "NormTimeDelta::new_hours is out of bounds" )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `days` normdays.
@@ -404,10 +380,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_days( 1 ), NormTimeDelta::new_seconds( 100_000 ) );
 	/// ```
 	pub fn new_days( days: i64 ) -> Self {
-		Self {
-			secs: days * DUR_NORMDAY,
-			nanos: 0,
-		}
+		Self::new( days * DUR_NORMDAY, 0 ).expect( "NormTimeDelta::new_days is out of bounds" )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `years` normyears.
@@ -421,10 +394,7 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_years( 1 ), NormTimeDelta::new_seconds( 30_000_000 ) );
 	/// ```
 	pub fn new_years( years: i64 ) -> Self {
-		Self {
-			secs: years * DUR_NORMYEAR,
-			nanos: 0,
-		}
+		Self::new( years * DUR_NORMYEAR, 0 ).expect( "NormTimeDelta::new_years is out of bounds" )
 	}
 
 	/// Creates a new `NormTimeDelta` that has a duration of `years` earth years.
@@ -438,9 +408,23 @@ impl NormTimeDelta {
 	/// assert_eq!( NormTimeDelta::new_earthyears( 1 ), NormTimeDelta::new_seconds( 31_557_600 ) );
 	/// ```
 	pub fn new_earthyears( years: i64 ) -> Self {
-		Self {
-			secs: years * DUR_TERRAYEAR,
-			nanos: 0,
+		Self::new( years * DUR_TERRAYEAR, 0 ).expect( "NormTimeDelta::new_earthyears is out of bounds" )
+	}
+
+	/// Returns the subsecond fraction of `NormTimeDelta` as number of nanoseconds.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new( 1, 10 ).unwrap().subsec_nanos(), 10 );
+	/// ```
+	pub fn subsec_nanos( &self ) -> i32 {
+		if self.secs < 0 && self.nanos > 0 {
+			self.nanos - NANOS_PER_SEC
+		} else {
+			self.nanos
 		}
 	}
 
