@@ -49,8 +49,16 @@ pub enum ConversionError {
 // Constants
 
 
+/// The number of nanoseconds per millisecond.
+const NANOS_PER_MILLI: i32 = 1_000_000;
+
+
 /// The number of nanoseconds per second.
 const NANOS_PER_SEC: i32 = 1_000_000_000;
+
+
+/// The number of milliseconds per second.
+const MILLIS_PER_SEC: i64 = 1000;
 
 
 
@@ -276,6 +284,18 @@ impl NormTimeDelta {
 		nanos: 0,
 	};
 
+	/// The minimum possible `NormTimeDelta`. This is limited to `-i64::MAX` milliseconds.
+	const MIN: Self = Self {
+		secs: -i64::MAX / MILLIS_PER_SEC - 1,
+		nanos: NANOS_PER_SEC + ( -i64::MAX % MILLIS_PER_SEC ) as i32 * NANOS_PER_MILLI,
+	};
+
+	/// The maximum possible `NormTimeDelta`. This is limited to `i64::MAX` milliseconds.
+	const MAX: NormTimeDelta = NormTimeDelta {
+		secs: i64::MAX / MILLIS_PER_SEC,
+		nanos: ( i64::MAX % MILLIS_PER_SEC ) as i32 * NANOS_PER_MILLI,
+	};
+
 	/// Creates a new `NormTimeDelta` that has a duration of `secs` + `nanos`.
 	///
 	/// # Example
@@ -285,8 +305,13 @@ impl NormTimeDelta {
 	///
 	/// assert_eq!( NormTimeDelta::new( 0, 0 ).unwrap(), NormTimeDelta::ZERO );
 	/// ```
-	pub fn new( secs: i64, nanos: u32 ) -> Option<Self> {
-		if nanos >= 1_000_000_000 {
+	pub const fn new( secs: i64, nanos: u32 ) -> Option<Self> {
+		if nanos >= 1_000_000_000 ||
+			secs < Self::MIN.secs ||
+			secs > Self::MAX.secs ||
+			( secs == Self::MAX.secs && nanos > Self::MAX.nanos as u32 ) ||
+			( secs == Self::MIN.secs && nanos < Self::MIN.nanos as u32 )
+		{
 			return None;
 		}
 
@@ -947,9 +972,71 @@ impl NormTimeDelta {
 			.collect::<Vec<String>>()
 			.join( "\\," )
 	}
+
+	/// Adding two `NormTimeDelta`s. If an overflow occurs, this function returns `None`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 1 ).checked_add( &NormTimeDelta::new_seconds( 10 ) ),
+	///     Some( NormTimeDelta::new_seconds( 11 ) )
+	/// );
+	/// assert!(
+	///     NormTimeDelta::new_seconds( i64::MAX / 1000 ).checked_add( &NormTimeDelta::new_seconds( 1 ) ).is_none()
+	/// );
+	/// ```
+	#[must_use]
+	pub const fn checked_add( &self, rhs: &Self ) -> Option<Self> {
+		// Since the maximum number of seconds in `NormTimeDelta` is limited to `i64::MAX *milliseconds*, the addition of two `NormTimeDelta`s can never overflow an `i64`.
+		// The check if a valid `NormTimeDelta` can be created is happening in `new()`.
+		let mut secs = self.secs + rhs.secs;
+		let mut nanos = self.nanos + rhs.nanos;
+
+		if nanos >= NANOS_PER_SEC {
+			nanos -= NANOS_PER_SEC;
+			secs += 1;
+		}
+
+		Self::new( secs, nanos as u32 )
+	}
+
+    /// Subtracting two `NormTimeDelta`s. If an overflow occurs, this function returns `None`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!(
+	///     NormTimeDelta::new_seconds( 1 ).checked_sub( &NormTimeDelta::new_seconds( 10 ) ),
+	///     Some( NormTimeDelta::new_seconds( -9 ) )
+	/// );
+	/// assert!(
+	///     NormTimeDelta::new_seconds( -i64::MAX / 1000 ).checked_sub( &NormTimeDelta::new_seconds( 1 ) ).is_none()
+	/// );
+	/// ```
+	#[must_use]
+	pub const fn checked_sub( &self, rhs: &Self ) -> Option<Self> {
+		// Since the minimum number of seconds in `NormTimeDelta` is limited to `-i64::MAX *milliseconds*, the subtraction of two `NormTimeDelta`s can never overflow an `i64`.
+		// The check if a valid `NormTimeDelta` can be created is happening in `new()`.
+		let mut secs = self.secs - rhs.secs;
+		let mut nanos = self.nanos - rhs.nanos;
+
+		if nanos < 0 {
+			nanos += NANOS_PER_SEC;
+			secs -= 1;
+		}
+
+		Self::new( secs, nanos as u32 )
+	}
 }
 
-/// Adding two `NormTimeDelta` together returns the sum of the duration of both.
+/// Adding two `NormTimeDelta`s together returns the sum of the duration of both.
+///
+/// **Note:** Panics if the combined duration of `self` and `other` is larger than `i64::MAX` milliseconds.
 ///
 /// # Example
 ///
@@ -964,16 +1051,8 @@ impl NormTimeDelta {
 impl Add for NormTimeDelta {
 	type Output = Self;
 
-	fn add( self, rhs: NormTimeDelta ) -> Self::Output {
-		let mut secs = self.secs + rhs.secs;
-		let mut nanos = self.nanos + rhs.nanos;
-
-		if nanos >= NANOS_PER_SEC {
-			nanos -= NANOS_PER_SEC;
-			secs += 1;
-		}
-
-		Self::new( secs, nanos as u32 ).unwrap()
+	fn add( self, rhs: Self ) -> Self::Output {
+		self.checked_add( &rhs ).expect( "Overflow in `NormTimeDelta + NormTimeDelta`" )
 	}
 }
 
@@ -993,16 +1072,8 @@ impl Add for NormTimeDelta {
 impl Sub for NormTimeDelta {
 	type Output = Self;
 
-	fn sub( self, rhs: Self ) -> Self::Output {
-		let mut secs = self.secs - rhs.secs;
-		let mut nanos = self.nanos - rhs.nanos;
-
-		if nanos < 0 {
-			nanos += NANOS_PER_SEC;
-			secs -= 1;
-		}
-
-		Self::new( secs, nanos as u32 ).unwrap()
+	fn sub( self, rhs: Self ) -> Self {
+		self.checked_sub( &rhs ).expect( "Overflow in `NormTimeDelta - NormTimeDelta`")
 	}
 }
 
