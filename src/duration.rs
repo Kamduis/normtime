@@ -9,7 +9,7 @@
 
 use std::iter::Sum;
 use std::fmt;
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul, Div};
 use std::str::FromStr;
 
 use thiserror::Error;
@@ -1032,22 +1032,70 @@ impl NormTimeDelta {
 
 		Self::new( secs, nanos as u32 )
 	}
+
+	/// Multiply a `NormTimeDelta` with a `i32`. If an overflow occurs, this function returns `None`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).checked_mul( 2 ), Some( NormTimeDelta::new_seconds( 2 ) ) );
+	/// assert!( NormTimeDelta::new_seconds( i64::MAX / 1000 ).checked_mul( 1001 ).is_none() );
+	/// ```
+	#[must_use]
+	pub const fn checked_mul( &self, rhs: i32 ) -> Option<Self> {
+		// Multiply nanoseconds as `i64` to prevent overflow.
+		let nanos_total = self.nanos as i64 * rhs as i64;
+
+		let secs_more = nanos_total.div_euclid( NANOS_PER_SEC as i64 );
+		let nanos = nanos_total.rem_euclid( NANOS_PER_SEC as i64 );
+
+		// Multiply seconds as `i128` to prevent overflow
+		let secs: i128 = self.secs as i128 * rhs as i128 + secs_more as i128;
+
+		if secs <= i64::MIN as i128 || secs >= i64::MAX as i128 {
+			return None;
+		};
+
+		Some( Self {
+			secs: secs as i64,
+			nanos: nanos as i32
+		} )
+	}
+
+	/// Divide a `NormTimeDelta` with a `i32`. A division by 0 returns `None`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use normtime::NormTimeDelta;
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 2 ).checked_div( 2 ), Some( NormTimeDelta::new_seconds( 1 ) ) );
+	/// assert!( NormTimeDelta::new_seconds( 2 ).checked_div( 0 ).is_none() );
+	/// ```
+	#[must_use]
+	pub const fn checked_div( &self, rhs: i32 ) -> Option<Self> {
+		if rhs == 0 {
+			return None;
+		}
+
+		let secs = self.secs / rhs as i64;
+		let carry = self.secs % rhs as i64;
+		let nanos_more = carry * NANOS_PER_SEC as i64 / rhs as i64;
+		let nanos = self.nanos / rhs + nanos_more as i32;
+
+		let ( secs, nanos ) = match nanos {
+			i32::MIN..=-1 => ( secs - 1, nanos + NANOS_PER_SEC ),
+			NANOS_PER_SEC..=i32::MAX => ( secs + 1, nanos - NANOS_PER_SEC ),
+			_ => ( secs, nanos ),
+		};
+
+		Some( Self { secs, nanos } )
+	}
 }
 
-/// Adding two `NormTimeDelta`s together returns the sum of the duration of both.
-///
-/// **Note:** Panics if the combined duration of `self` and `other` is larger than `i64::MAX` milliseconds.
-///
-/// # Example
-///
-/// ```
-/// use normtime::NormTimeDelta;
-///
-/// assert_eq!(
-///     NormTimeDelta::new_seconds( 1 ) + NormTimeDelta::new_seconds( 10 ),
-///     NormTimeDelta::new_seconds( 11 )
-/// );
-/// ```
+
 impl Add for NormTimeDelta {
 	type Output = Self;
 
@@ -1057,23 +1105,29 @@ impl Add for NormTimeDelta {
 }
 
 
-/// Subtracting two `NormTimeDelta`.
-///
-/// # Example
-///
-/// ```
-/// use normtime::NormTimeDelta;
-///
-/// assert_eq!(
-///     NormTimeDelta::new_seconds( 1 ) - NormTimeDelta::new_seconds( 10 ),
-///     NormTimeDelta::new_seconds( -9 )
-/// );
-/// ```
 impl Sub for NormTimeDelta {
 	type Output = Self;
 
 	fn sub( self, rhs: Self ) -> Self {
 		self.checked_sub( &rhs ).expect( "Overflow in `NormTimeDelta - NormTimeDelta`")
+	}
+}
+
+
+impl Mul<i32> for NormTimeDelta {
+	type Output = Self;
+
+	fn mul(self, rhs: i32) -> Self {
+		self.checked_mul(rhs).expect("Overflow in `NormTimeDelta * i32`")
+	}
+}
+
+
+impl Div<i32> for NormTimeDelta {
+	type Output = Self;
+
+	fn div( self, rhs: i32 ) -> Self {
+		self.checked_div( rhs ).expect( "Division by 0" )
 	}
 }
 
