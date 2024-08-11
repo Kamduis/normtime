@@ -21,10 +21,9 @@
 // Crates
 
 
-use std::fmt;
+#[cfg( any( feature = "i18n", feature = "tex" ) )] use std::fmt;
 
-#[cfg( all( feature = "i18n", feature = "tex" ) )]
-use unic_langid::LanguageIdentifier;
+#[cfg( feature = "i18n" )] use unic_langid::LanguageIdentifier;
 
 mod time;
 pub use crate::time::NormTime;
