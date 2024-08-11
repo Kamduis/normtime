@@ -14,20 +14,16 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-#[cfg( feature = "i18n" )]
-use fluent_templates::Loader;
-#[cfg( feature = "i18n" )]
-use unic_langid::LanguageIdentifier;
+#[cfg( feature = "i18n" )] use fluent_templates::Loader;
+#[cfg( feature = "i18n" )] use unic_langid::LanguageIdentifier;
 
-#[cfg( feature = "tex" )]
-use crate::{Latex, LatexSym};
-#[cfg( feature = "tex" )]
-use crate::TexOptions;
+#[cfg( feature = "i18n" )] use crate::DisplayLocale;
+#[cfg( feature = "tex" )] use crate::{Latex, LatexSym};
+#[cfg( all( feature = "i18n", feature = "tex" ) )] use crate::LatexLocale;
+#[cfg( feature = "tex" )] use crate::TexOptions;
 
 use crate::{DUR_NORMYEAR, DUR_NORMMONTH, DUR_NORMWEEK, DUR_NORMDAY, DUR_TERRAYEAR, DUR_HOUR, DUR_MINUTE};
-
-#[cfg( feature = "i18n" )]
-use crate::LOCALES;
+#[cfg( feature = "i18n" )] use crate::LOCALES;
 
 
 
@@ -80,36 +76,6 @@ pub enum Unit {
 }
 
 impl Unit {
-	/// Representing unit as string, translating the unit into the language specified by `locale`.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use unic_langid::LanguageIdentifier;
-	/// use unic_langid::langid;
-	/// use normtime::Unit;
-	///
-	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
-	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
-	///
-	/// assert_eq!( Unit::Year.to_string_locale( &US_ENGLISH ), "normyears" );
-	/// assert_eq!( Unit::Second.to_string_locale( &US_ENGLISH ), "seconds" );
-	/// assert_eq!( Unit::Year.to_string_locale( &GERMAN ), "Normjahre" );
-	/// assert_eq!( Unit::Second.to_string_locale( &GERMAN ), "Sekunden" );
-	/// ```
-	#[cfg( feature = "i18n" )]
-	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
-		match self {
-			Self::Year =>   format!( "{}", LOCALES.lookup( locale, "normyears" ) ),
-			Self::Month =>  format!( "{}", LOCALES.lookup( locale, "normmonths" ) ),
-			Self::Week =>   format!( "{}", LOCALES.lookup( locale, "normweeks" ) ),
-			Self::Day =>    format!( "{}", LOCALES.lookup( locale, "normdays" ) ),
-			Self::Hour =>   format!( "{}", LOCALES.lookup( locale, "hours" ) ),
-			Self::Minute => format!( "{}", LOCALES.lookup( locale, "minutes" ) ),
-			Self::Second => format!( "{}", LOCALES.lookup( locale, "seconds" ) ),
-		}
-	}
-
 	/// Represent unit as symbol.
 	///
 	/// # Example
@@ -180,43 +146,44 @@ impl fmt::Display for Unit {
 	}
 }
 
-#[cfg( feature = "tex" )]
-impl Latex for Unit {
-	/// Represent unit to be usable with LaTeX.
-	///
-	/// **Note:** This is identical to `.to_string()`.
+#[cfg( feature = "i18n" )]
+impl DisplayLocale for Unit {
+	/// Representing unit as string, translating the unit into the language specified by `locale`.
 	///
 	/// # Example
 	///
 	/// ```
-	/// use normtime::{Latex, TexOptions};
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::DisplayLocale;
 	/// use normtime::Unit;
 	///
-	/// assert_eq!( Unit::Year.to_latex( &TexOptions::new() ), "normyears" );
-	/// assert_eq!( Unit::Second.to_latex( &TexOptions::new() ), "seconds" );
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// assert_eq!( Unit::Year.to_string_locale( &US_ENGLISH ), "normyears" );
+	/// assert_eq!( Unit::Second.to_string_locale( &US_ENGLISH ), "seconds" );
+	/// assert_eq!( Unit::Year.to_string_locale( &GERMAN ), "Normjahre" );
+	/// assert_eq!( Unit::Second.to_string_locale( &GERMAN ), "Sekunden" );
 	/// ```
-	fn to_latex( &self, _options: &TexOptions ) -> String {
-		self.to_string()
-	}
-
-	/// Represent unit to be usable with LaTeX, translating the unit into the language specified by `locale`.
-	///
-	/// **Note:** This is identical to `.to_string_locale()`.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use normtime::{Latex, TexOptions};
-	/// use normtime::Unit;
-	///
-	/// assert_eq!( Unit::Year.to_latex( &TexOptions::new() ), r"normyears" );
-	/// assert_eq!( Unit::Second.to_latex( &TexOptions::new() ), r"seconds" );
-	/// ```
-	#[cfg( feature = "i18n" )]
-	fn to_latex_locale( &self, locale: &LanguageIdentifier, _options: &TexOptions ) -> String {
-		self.to_string_locale( locale )
+	fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		match self {
+			Self::Year =>   format!( "{}", LOCALES.lookup( locale, "normyears" ) ),
+			Self::Month =>  format!( "{}", LOCALES.lookup( locale, "normmonths" ) ),
+			Self::Week =>   format!( "{}", LOCALES.lookup( locale, "normweeks" ) ),
+			Self::Day =>    format!( "{}", LOCALES.lookup( locale, "normdays" ) ),
+			Self::Hour =>   format!( "{}", LOCALES.lookup( locale, "hours" ) ),
+			Self::Minute => format!( "{}", LOCALES.lookup( locale, "minutes" ) ),
+			Self::Second => format!( "{}", LOCALES.lookup( locale, "seconds" ) ),
+		}
 	}
 }
+
+#[cfg( feature = "tex" )]
+impl Latex for Unit {}
+
+#[cfg( all( feature = "i18n", feature = "tex" ) )]
+impl LatexLocale for Unit {}
 
 #[cfg( feature = "tex" )]
 impl LatexSym for Unit {
@@ -633,31 +600,6 @@ impl NormTimeDelta {
 		}
 
 		elems
-	}
-
-	/// Returns a string providing the duration of `self` in seconds translated to the language provided by `locale`.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use unic_langid::LanguageIdentifier;
-	/// use unic_langid::langid;
-	/// use normtime::{NormTimeDelta, Unit};
-	///
-	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
-	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
-	///
-	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &US_ENGLISH ), "1 second" );
-	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &US_ENGLISH ), "10 seconds" );
-	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &GERMAN ), "1 Sekunde" );
-	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &GERMAN ), "10 Sekunden" );
-	/// ```
-	#[cfg( feature = "i18n" )]
-	pub fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
-		match self.secs {
-			1 => format!( "{} {}", self.secs, LOCALES.lookup( locale, "second" ) ),
-			_ => format!( "{} {}", self.secs, LOCALES.lookup( locale, "seconds" ) ),
-		}
 	}
 
 	/// Returns the duration as string with symbol as unit.
@@ -1147,6 +1089,34 @@ impl fmt::Display for NormTimeDelta {
 	}
 }
 
+#[cfg( feature = "i18n" )]
+impl DisplayLocale for NormTimeDelta {
+	/// Returns a string providing the duration of `self` in seconds translated to the language provided by `locale`.
+	///
+	/// # Example
+	///
+	/// ```
+	/// use unic_langid::LanguageIdentifier;
+	/// use unic_langid::langid;
+	/// use normtime::DisplayLocale;
+	/// use normtime::{NormTimeDelta, Unit};
+	///
+	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
+	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
+	///
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &US_ENGLISH ), "1 second" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &US_ENGLISH ), "10 seconds" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 1 ).to_string_locale( &GERMAN ), "1 Sekunde" );
+	/// assert_eq!( NormTimeDelta::new_seconds( 10 ).to_string_locale( &GERMAN ), "10 Sekunden" );
+	/// ```
+	fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		match self.secs {
+			1 => format!( "{} {}", self.secs, LOCALES.lookup( locale, "second" ) ),
+			_ => format!( "{} {}", self.secs, LOCALES.lookup( locale, "seconds" ) ),
+		}
+	}
+}
+
 #[cfg( feature = "tex" )]
 impl Latex for NormTimeDelta {
 	/// Returning `self` as LaTeX string.
@@ -1167,7 +1137,10 @@ impl Latex for NormTimeDelta {
 			_ => format!( "{}~seconds", self.secs ),
 		}
 	}
+}
 
+#[cfg( all( feature = "i18n", feature = "tex" ) )]
+impl LatexLocale for NormTimeDelta {
 	/// Returns a string providing the duration of `self` in seconds translated to the language provided by `locale`.
 	///
 	/// # Example
@@ -1175,7 +1148,7 @@ impl Latex for NormTimeDelta {
 	/// ```
 	/// use unic_langid::LanguageIdentifier;
 	/// use unic_langid::langid;
-	/// use normtime::{Latex, TexOptions};
+	/// use normtime::{Latex, LatexLocale, TexOptions};
 	/// use normtime::NormTimeDelta;
 	///
 	/// const US_ENGLISH: LanguageIdentifier = langid!( "en-US" );
@@ -1198,7 +1171,6 @@ impl Latex for NormTimeDelta {
 	///     "10~Sekunden"
 	/// );
 	/// ```
-	#[cfg( all( feature = "i18n", feature = "tex" ) )]
 	fn to_latex_locale( &self, locale: &LanguageIdentifier, _options: &TexOptions ) -> String {
 		match self.secs {
 			1 => format!( "{}~{}", self.secs, LOCALES.lookup( locale, "second" ) ),
