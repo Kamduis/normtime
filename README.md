@@ -88,8 +88,8 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 
 [1]: https://www.bipm.org/documents/20126/41483022/SI-Brochure-9-EN.pdf
-[`NormTime`]: https://docs.rs/normtime/latest/struct.NormTime.html
-[`NormTimeDelta`]: https://docs.rs/normtime/latest/struct.NormTimeDelta.html
+[`NormTime`]: https://docs.rs/normtime/latest/normtime/struct.NormTime.html
+[`NormTimeDelta`]: https://docs.rs/normtime/latest/normtime/struct.NormTimeDelta.html
 [`DateTime`]: https://docs.rs/chrono/latest/chrono/struct.DateTime.html
 [`chrono`]: https://docs.rs/chrono/latest/chrono/
 [`NaiveDateTime`]: https://docs.rs/chrono/latest/chrono/struct.NaiveDateTime.html
