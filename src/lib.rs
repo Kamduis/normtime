@@ -21,8 +21,9 @@
 // Crates
 
 
-#[cfg( all( feature = "i18n", feature = "tex" ) )]
-use unic_langid::LanguageIdentifier;
+#[cfg( any( feature = "i18n", feature = "tex" ) )] use std::fmt;
+
+#[cfg( feature = "i18n" )] use unic_langid::LanguageIdentifier;
 
 mod time;
 pub use crate::time::NormTime;
@@ -36,17 +37,48 @@ pub use crate::duration::{NormTimeDelta, Unit};
 // Traits
 
 
+/// Providing a localized `.to_string()`: `.to_string_locale()`.
+///
+/// This Trait is only available, if the **`i18n`** feature has been enabled.
+#[cfg( feature = "i18n" )]
+pub trait DisplayLocale: fmt::Display {
+	/// Returns the localized string representation of `self`.
+	///
+	/// The standard implementation ignores `locale` and returns the same string as `.to_string()`.
+	#[allow( unused_variables )]
+	fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
+		self.to_string()
+	}
+}
+
+
 /// Providing conversion into LaTeX code.
 ///
 /// This Trait is only available, if the **`tex`** feature has been enabled.
 #[cfg( feature = "tex" )]
-pub trait Latex {
+pub trait Latex: fmt::Display {
 	/// Converts the entity into a LaTeX-string.
-	fn to_latex( &self, options: &TexOptions ) -> String;
+	///
+	/// The standard implementation ignores `options` and returns the same as `.to_string()`.
+	#[allow( unused_variables )]
+	fn to_latex( &self, options: &TexOptions ) -> String {
+		self.to_string()
+	}
+}
 
-	/// Converts the entity into a LaTeX-string translating it into the language provided by `locale`.
-	#[cfg( feature = "i18n" )]
-	fn to_latex_locale( &self, locale: &LanguageIdentifier, options: &TexOptions ) -> String;
+
+/// Providing a localized `.to_latex()`: `.to_latex_locale()`.
+///
+/// This Trait is only available, if the both, the **`i18n`** and the **`tex`** features have been enabled.
+#[cfg( all( feature = "i18n", feature = "tex" ) )]
+pub trait LatexLocale: DisplayLocale + Latex {
+	/// Returns the localized LaTeX string representation of `self`.
+	///
+	/// The standard implementation ignores `options` and returns the same string as `.to_string_locale()`.
+	#[allow( unused_variables )]
+	fn to_latex_locale( &self, locale: &LanguageIdentifier, options: &TexOptions ) -> String {
+		self.to_string_locale( locale )
+	}
 }
 
 
