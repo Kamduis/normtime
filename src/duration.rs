@@ -12,6 +12,7 @@ use std::fmt;
 use std::ops::{Add, Sub, Mul, Div};
 use std::str::FromStr;
 
+use chrono::TimeDelta;
 use thiserror::Error;
 
 #[cfg( feature = "i18n" )] use fluent_templates::Loader;
@@ -1070,6 +1071,15 @@ impl Sum<NormTimeDelta> for NormTimeDelta {
 	}
 }
 
+impl From<TimeDelta> for NormTimeDelta {
+	fn from( item: TimeDelta ) -> Self {
+		Self {
+			secs: item.num_seconds(),
+			nanos: item.subsec_nanos(),
+		}
+	}
+}
+
 /// Normtime duration is displayed in seconds.
 ///
 /// # Example
@@ -1359,6 +1369,13 @@ mod tests {
 
 		assert_eq!( items.iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
 		assert_eq!( items.into_iter().sum::<NormTimeDelta>(), NormTimeDelta::new_seconds( 33 ) );
+	}
+
+	#[test]
+	fn tesxt_from_chrono_timedelta() {
+		assert_eq!( NormTimeDelta::from( TimeDelta::seconds( 10 ) ), NormTimeDelta::new_seconds( 10 ) );
+		assert_eq!( NormTimeDelta::from( TimeDelta::hours( 10 ) ), NormTimeDelta::new_hours( 10 ) );
+		assert_eq!( NormTimeDelta::from( TimeDelta::new( 10, 1111 ).unwrap() ), NormTimeDelta::new( 10, 1111 ).unwrap() );
 	}
 
 	#[test]
