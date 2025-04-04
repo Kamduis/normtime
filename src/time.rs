@@ -90,7 +90,7 @@ impl NormTime {
 
 	/// Create a new `NormTime` from `self`, using `normyear` instead of the original normyear.
 	pub fn with_year( self, normyear: i32 ) -> Self {
-		let secs_of_year_old = self.0.rem_euclid( DUR_NORMYEAR );
+		let secs_of_year_old = self.0.div_euclid( DUR_NORMYEAR ) * DUR_NORMYEAR;
 		let secs_of_year_new = normyear as i64 * DUR_NORMYEAR;
 
 		Self( self.0 - secs_of_year_old + secs_of_year_new )
@@ -436,6 +436,16 @@ mod tests {
 
 		assert_eq!( time_norm_zero.with_year( 100 ), time_norm_zero + NormTimeDelta::new_years( 100 ) );
 		assert_eq!( time_norm_zero.with_year( 1000 ), time_norm_zero + NormTimeDelta::new_years( 1000 ) );
+		assert_eq!( time_norm_zero.with_year( -100 ), time_norm_zero + NormTimeDelta::new_years( -100 ) );
+		assert_eq!( time_norm_zero.with_year( time_norm_zero.year() ), time_norm_zero );
+
+		let time_norm_hundred = NormTime::from_ymd_opt( 100, 0, 0 ).unwrap();
+
+		assert_eq!( time_norm_hundred.with_year( 100 ), time_norm_hundred );
+		assert_eq!( time_norm_hundred.with_year( 1000 ), NormTime::from_ymd_opt( 1000, 0, 0 ).unwrap() );
+		assert_eq!( time_norm_hundred.with_year( -100 ), NormTime::from_ymd_opt( -100, 0, 0 ).unwrap() );
+		assert_eq!( time_norm_hundred.with_year( time_norm_hundred.year() ), time_norm_hundred );
+
 	}
 
 	#[test]
