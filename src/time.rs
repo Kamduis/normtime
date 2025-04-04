@@ -101,6 +101,17 @@ impl NormTime {
 		NORMTIME_OFFSET + self.0
 	}
 
+	/// Return the normyear of `self`.
+	pub fn year( &self ) -> i32 {
+		let year = self.0.div_euclid( DUR_NORMYEAR );
+
+		if year < i32::min_value() as i64 || year > i32::max_value() as i64 {
+			panic!( "The year cannot be represented as `i32`" );
+		}
+
+		year as i32
+	}
+
 	/// Return the string part of `self` as `String`.
 	pub fn to_string_year( self ) -> String {
 		let year = self.0.div_euclid( DUR_NORMYEAR );
@@ -425,6 +436,12 @@ mod tests {
 
 		assert_eq!( time_norm_zero.with_year( 100 ), time_norm_zero + NormTimeDelta::new_years( 100 ) );
 		assert_eq!( time_norm_zero.with_year( 1000 ), time_norm_zero + NormTimeDelta::new_years( 1000 ) );
+	}
+
+	#[test]
+	fn normtime_year() {
+		assert_eq!( NormTime::from_ymd_opt( 2068, 1, 1 ).unwrap().year(), 2068 );
+		assert_eq!( NormTime::from_ymd_opt( 2345, 6, 7 ).unwrap().year(), 2345 );
 	}
 
 	#[test]
