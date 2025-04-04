@@ -88,6 +88,14 @@ impl NormTime {
 		Self( self.0 + tdelta.num_seconds() )
 	}
 
+	/// Create a new `NormTime` from `self`, using `normyear` instead of the original normyear.
+	pub fn with_year( self, normyear: i32 ) -> Self {
+		let secs_of_year_old = self.0.rem_euclid( DUR_NORMYEAR );
+		let secs_of_year_new = normyear as i64 * DUR_NORMYEAR;
+
+		Self( self.0 - secs_of_year_old + secs_of_year_new )
+	}
+
 	/// Returns the Unix timestamp representing `self`.
 	pub fn timestamp( &self ) -> i64 {
 		NORMTIME_OFFSET + self.0
@@ -408,6 +416,15 @@ mod tests {
 		assert_eq!( NormTime::from_timestamp( time_norm_zero.and_utc().timestamp() ).unwrap(), time_norm_zero );
 		assert_eq!( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap(), time_norm_zero );
 		assert_eq!( NormTime::from_ymd_opt( 1, 0, 0 ).unwrap(), time_norm_zero + TimeDelta::seconds( 30_000_000 ) );
+	}
+
+	#[test]
+	fn create_normtime_with_year() {
+		// Unix-time zero.
+		let time_norm_zero = NormTime::from_ymd_opt( 0, 0, 0 ).unwrap();
+
+		assert_eq!( time_norm_zero.with_year( 100 ), time_norm_zero + NormTimeDelta::new_years( 100 ) );
+		assert_eq!( time_norm_zero.with_year( 1000 ), time_norm_zero + NormTimeDelta::new_years( 1000 ) );
 	}
 
 	#[test]
