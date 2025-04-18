@@ -105,7 +105,7 @@ impl NormTime {
 	pub fn year( &self ) -> i32 {
 		let year = self.0.div_euclid( DUR_NORMYEAR );
 
-		if year < i32::min_value() as i64 || year > i32::max_value() as i64 {
+		if year < i32::MIN as i64 || year > i32::MAX as i64 {
 			panic!( "The year cannot be represented as `i32`" );
 		}
 
@@ -366,7 +366,7 @@ mod normtime_serde {
 				inner: &'a D,
 			}
 
-			impl<'a, D: fmt::Debug> fmt::Display for FormatWrapped<'a, D> {
+			impl<D: fmt::Debug> fmt::Display for FormatWrapped<'_, D> {
 				fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
 					self.inner.fmt( f )
 				}
@@ -378,7 +378,7 @@ mod normtime_serde {
 
 	struct NormTimeVisitor;
 
-	impl<'de> serde::de::Visitor<'de> for NormTimeVisitor {
+	impl serde::de::Visitor<'_> for NormTimeVisitor {
 		type Value = NormTime;
 
 		fn expecting( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
