@@ -26,6 +26,7 @@
 #[cfg( feature = "i18n" )] use unic_langid::LanguageIdentifier;
 
 mod time;
+pub use crate::time::TimeError;
 pub use crate::time::NormTime;
 mod duration;
 pub use crate::duration::{NormTimeDelta, Unit};

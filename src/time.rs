@@ -88,9 +88,28 @@ impl NormTime {
 		Self( self.0 + tdelta.num_seconds() )
 	}
 
+	/// Create a new `NormTime` from `self`, using `normyear` instead of the original normyear.
+	pub fn with_year( self, normyear: i32 ) -> Self {
+		let secs_of_year_old = self.0.div_euclid( DUR_NORMYEAR ) * DUR_NORMYEAR;
+		let secs_of_year_new = normyear as i64 * DUR_NORMYEAR;
+
+		Self( self.0 - secs_of_year_old + secs_of_year_new )
+	}
+
 	/// Returns the Unix timestamp representing `self`.
 	pub fn timestamp( &self ) -> i64 {
 		NORMTIME_OFFSET + self.0
+	}
+
+	/// Return the normyear of `self`.
+	pub fn year( &self ) -> i32 {
+		let year = self.0.div_euclid( DUR_NORMYEAR );
+
+		if year < i32::MIN as i64 || year > i32::MAX as i64 {
+			panic!( "The year cannot be represented as `i32`" );
+		}
+
+		year as i32
 	}
 
 	/// Return the string part of `self` as `String`.
@@ -347,7 +366,7 @@ mod normtime_serde {
 				inner: &'a D,
 			}
 
-			impl<'a, D: fmt::Debug> fmt::Display for FormatWrapped<'a, D> {
+			impl<D: fmt::Debug> fmt::Display for FormatWrapped<'_, D> {
 				fn fmt( &self, f: &mut fmt::Formatter ) -> fmt::Result {
 					self.inner.fmt( f )
 				}
@@ -359,7 +378,7 @@ mod normtime_serde {
 
 	struct NormTimeVisitor;
 
-	impl<'de> serde::de::Visitor<'de> for NormTimeVisitor {
+	impl serde::de::Visitor<'_> for NormTimeVisitor {
 		type Value = NormTime;
 
 		fn expecting( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
@@ -408,6 +427,31 @@ mod tests {
 		assert_eq!( NormTime::from_timestamp( time_norm_zero.and_utc().timestamp() ).unwrap(), time_norm_zero );
 		assert_eq!( NormTime::from_ymd_opt( 0, 0, 0 ).unwrap(), time_norm_zero );
 		assert_eq!( NormTime::from_ymd_opt( 1, 0, 0 ).unwrap(), time_norm_zero + TimeDelta::seconds( 30_000_000 ) );
+	}
+
+	#[test]
+	fn create_normtime_with_year() {
+		// Unix-time zero.
+		let time_norm_zero = NormTime::from_ymd_opt( 0, 0, 0 ).unwrap();
+
+		assert_eq!( time_norm_zero.with_year( 100 ), time_norm_zero + NormTimeDelta::new_years( 100 ) );
+		assert_eq!( time_norm_zero.with_year( 1000 ), time_norm_zero + NormTimeDelta::new_years( 1000 ) );
+		assert_eq!( time_norm_zero.with_year( -100 ), time_norm_zero + NormTimeDelta::new_years( -100 ) );
+		assert_eq!( time_norm_zero.with_year( time_norm_zero.year() ), time_norm_zero );
+
+		let time_norm_hundred = NormTime::from_ymd_opt( 100, 0, 0 ).unwrap();
+
+		assert_eq!( time_norm_hundred.with_year( 100 ), time_norm_hundred );
+		assert_eq!( time_norm_hundred.with_year( 1000 ), NormTime::from_ymd_opt( 1000, 0, 0 ).unwrap() );
+		assert_eq!( time_norm_hundred.with_year( -100 ), NormTime::from_ymd_opt( -100, 0, 0 ).unwrap() );
+		assert_eq!( time_norm_hundred.with_year( time_norm_hundred.year() ), time_norm_hundred );
+
+	}
+
+	#[test]
+	fn normtime_year() {
+		assert_eq!( NormTime::from_ymd_opt( 2068, 1, 1 ).unwrap().year(), 2068 );
+		assert_eq!( NormTime::from_ymd_opt( 2345, 6, 7 ).unwrap().year(), 2345 );
 	}
 
 	#[test]
