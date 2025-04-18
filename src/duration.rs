@@ -169,13 +169,13 @@ impl DisplayLocale for Unit {
 	/// ```
 	fn to_string_locale( &self, locale: &LanguageIdentifier ) -> String {
 		match self {
-			Self::Year =>   format!( "{}", LOCALES.lookup( locale, "normyears" ) ),
-			Self::Month =>  format!( "{}", LOCALES.lookup( locale, "normmonths" ) ),
-			Self::Week =>   format!( "{}", LOCALES.lookup( locale, "normweeks" ) ),
-			Self::Day =>    format!( "{}", LOCALES.lookup( locale, "normdays" ) ),
-			Self::Hour =>   format!( "{}", LOCALES.lookup( locale, "hours" ) ),
-			Self::Minute => format!( "{}", LOCALES.lookup( locale, "minutes" ) ),
-			Self::Second => format!( "{}", LOCALES.lookup( locale, "seconds" ) ),
+			Self::Year =>   LOCALES.lookup( locale, "normyears" ),
+			Self::Month =>  LOCALES.lookup( locale, "normmonths" ),
+			Self::Week =>   LOCALES.lookup( locale, "normweeks" ),
+			Self::Day =>    LOCALES.lookup( locale, "normdays" ),
+			Self::Hour =>   LOCALES.lookup( locale, "hours" ),
+			Self::Minute => LOCALES.lookup( locale, "minutes" ),
+			Self::Second => LOCALES.lookup( locale, "seconds" ),
 		}
 	}
 }
