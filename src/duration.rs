@@ -1232,7 +1232,7 @@ mod normtime_serde {
 
 	struct NormTimeDeltaVisitor;
 
-	impl<'de> serde::de::Visitor<'de> for NormTimeDeltaVisitor {
+	impl serde::de::Visitor<'_> for NormTimeDeltaVisitor {
 		type Value = NormTimeDelta;
 
 		fn expecting( &self, formatter: &mut fmt::Formatter ) -> fmt::Result {
