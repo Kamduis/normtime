@@ -522,44 +522,6 @@ impl NormTimeDelta {
 		self.seconds() / DUR_NORMYEAR
 	}
 
-	/// Returns the duration of `self` in rough categories. E.g. "Kleinkind", "Kind", "Teenager", "Anfang 20", "Mitte 20", "Ende 20" etc.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use normtime::NormTimeDelta;
-	/// assert_eq!( NormTimeDelta::new_years( 2 ).roughly( false ), "Kleinkind" );
-	/// assert_eq!( NormTimeDelta::new_years( 4 ).roughly( false ), "Kind" );
-	/// assert_eq!( NormTimeDelta::new_years( 13 ).roughly( false ), "Teenager" );
-	/// assert_eq!( NormTimeDelta::new_years( 20 ).roughly( false ), "Anfang 20" );
-	/// assert_eq!( NormTimeDelta::new_years( 24 ).roughly( false ), "Mitte 20" );
-	/// assert_eq!( NormTimeDelta::new_years( 28 ).roughly( false ), "Ende 20" );
-	///
-	/// assert_eq!( NormTimeDelta::new_years( 2 ).roughly( true ), "Sehr jung" );
-	/// assert_eq!( NormTimeDelta::new_years( 4 ).roughly( true ), "Jung" );
-	/// assert_eq!( NormTimeDelta::new_years( 13 ).roughly( true ), "An Reife gewonnen" );
-	/// assert_eq!( NormTimeDelta::new_years( 20 ).roughly( true ), "Anfang 20" );
-	/// ```
-	pub fn roughly( &self, generic: bool ) -> String {
-		let number = self.years();
-
-		match number {
-			i64::MIN..=-1 => "Ungeboren".to_string(),
-			0..=2 => if generic { "Sehr jung".to_string() } else { "Kleinkind".to_string() },
-			3..=12 => if generic { "Jung".to_string() } else { "Kind".to_string() },
-			13..=19 => if generic { "An Reife gewonnen".to_string() } else { "Teenager".to_string() },
-			_ => {
-				let tens = ( number / 10 ) * 10;
-				match last_digit( number as u64 ) {
-					0..=2 => format!( "Anfang {}", tens ),
-					3..=6 => format!( "Mitte {}", tens ),
-					7..=9 => format!( "Ende {}", tens ),
-					_ => unreachable!(),
-				}
-			},
-		}
-	}
-
 	/// Returns duration as a vector of unit representations with selectable units rounded to the smallest unit provided.
 	fn as_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
 		let mut number = self.seconds();
