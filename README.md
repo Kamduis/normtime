@@ -10,7 +10,7 @@ Normtime aspires to represent time in a "metric" way. The goal is to have rough 
 
 Normtime has the following attributes:
 * The second is identical to the second as defined by the [International System of Units (SI)][1].
-* The higher order units are simple multiples of a second:
+* The higher order units are simple integer multiples of a second:
 
 	| Normtime        | Seconds | Standard Time                               |
 	|:----------------|--------:|:--------------------------------------------|
@@ -22,12 +22,12 @@ Normtime has the following attributes:
 	| **1 normmonth** |    3 Ms | ca. 35 standard days: 34 d 17 h 20 min      |
 	| **1 normyear**  |   30 Ms | ca. 1 standard year: 347 d 5 h 20 min       |
 
-* The 0-point of the normtime is offset from Unix time by 3'089'836'800 seconds (2068-01-01T00:00:00 standard time).
+* The 0-point of the normtime is offset from Unix time by 3'089'836'800 seconds (2068-01-01T00:00:00 standard time). This is arbitrarily chosen.
 
 
 ## Usage
 
-To use this crate your `Cargo.toml` could look like this (replace `x`, `y` and `z` with the latest version number):
+To use this crate, just add the following line to your projects `[dependencies]` in your `Cargo.toml` (replace `x`, `y` and `z` with the latest version number):
 
 ```toml
 [dependencies]

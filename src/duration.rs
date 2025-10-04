@@ -522,44 +522,6 @@ impl NormTimeDelta {
 		self.seconds() / DUR_NORMYEAR
 	}
 
-	/// Returns the duration of `self` in rough categories. E.g. "Kleinkind", "Kind", "Teenager", "Anfang 20", "Mitte 20", "Ende 20" etc.
-	///
-	/// # Example
-	///
-	/// ```
-	/// use normtime::NormTimeDelta;
-	/// assert_eq!( NormTimeDelta::new_years( 2 ).roughly( false ), "Kleinkind" );
-	/// assert_eq!( NormTimeDelta::new_years( 4 ).roughly( false ), "Kind" );
-	/// assert_eq!( NormTimeDelta::new_years( 13 ).roughly( false ), "Teenager" );
-	/// assert_eq!( NormTimeDelta::new_years( 20 ).roughly( false ), "Anfang 20" );
-	/// assert_eq!( NormTimeDelta::new_years( 24 ).roughly( false ), "Mitte 20" );
-	/// assert_eq!( NormTimeDelta::new_years( 28 ).roughly( false ), "Ende 20" );
-	///
-	/// assert_eq!( NormTimeDelta::new_years( 2 ).roughly( true ), "Sehr jung" );
-	/// assert_eq!( NormTimeDelta::new_years( 4 ).roughly( true ), "Jung" );
-	/// assert_eq!( NormTimeDelta::new_years( 13 ).roughly( true ), "An Reife gewonnen" );
-	/// assert_eq!( NormTimeDelta::new_years( 20 ).roughly( true ), "Anfang 20" );
-	/// ```
-	pub fn roughly( &self, generic: bool ) -> String {
-		let number = self.years();
-
-		match number {
-			i64::MIN..=-1 => "Ungeboren".to_string(),
-			0..=2 => if generic { "Sehr jung".to_string() } else { "Kleinkind".to_string() },
-			3..=12 => if generic { "Jung".to_string() } else { "Kind".to_string() },
-			13..=19 => if generic { "An Reife gewonnen".to_string() } else { "Teenager".to_string() },
-			_ => {
-				let tens = ( number / 10 ) * 10;
-				match last_digit( number as u64 ) {
-					0..=2 => format!( "Anfang {}", tens ),
-					3..=6 => format!( "Mitte {}", tens ),
-					7..=9 => format!( "Ende {}", tens ),
-					_ => unreachable!(),
-				}
-			},
-		}
-	}
-
 	/// Returns duration as a vector of unit representations with selectable units rounded to the smallest unit provided.
 	fn as_units( &self, units: &[Unit] ) -> Vec<(i64, Unit)> {
 		let mut number = self.seconds();
@@ -694,7 +656,28 @@ impl NormTimeDelta {
 			.join( " " )
 	}
 
+	/// Provide units in ordered fashion.
+	fn breakdown_units_used( &self, units: &[Unit] ) -> ( Vec<( i64, Unit )>, Vec<Unit> ) {
+		// Second is standard unit is none is given.
+		let units_sorted = if units.is_empty() {
+			vec![ Unit::Second ]
+		} else {
+			// Sort the units from smallest to greatest to always have the same order.
+			let mut unts = units.to_vec();
+			unts.sort();
+			unts
+		};
+
+		let coll: Vec<_> = self.as_units( &units_sorted ).into_iter()
+			.filter( |( k, _ )| k > &0 )
+			.collect();
+
+		( coll, units_sorted )
+	}
+
 	/// Returns a string representation of `self` with selectable units rounded to the smallest unit provided. Selected units, that are too large (would be 0) are omitted. The string is using the language that is provided by `locale`.
+	///
+	/// If the slice of `Unit`s given is empty, a unit of `Unit::Second` is assumed.
 	///
 	/// # Example
 	///
@@ -707,6 +690,7 @@ impl NormTimeDelta {
 	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_unit_locale( &[], &US_ENGLISH ), "90005000 seconds" );
 	/// assert_eq!( delta.to_string_unit_locale( &[ Unit::Day ], &US_ENGLISH ), "900 normdays" );
 	/// assert_eq!(
 	///     delta.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
@@ -728,6 +712,14 @@ impl NormTimeDelta {
 	///
 	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
 	/// assert_eq!(
+	///     delta_1.to_string_unit_locale( &[ Unit::Day ], &US_ENGLISH ),
+	///     "0 normdays"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_string_unit_locale( &[ Unit::Year, Unit::Day ], &US_ENGLISH ),
+	///     "0 normdays"
+	/// );
+	/// assert_eq!(
 	///     delta_1.to_string_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
 	///     "1 hour"
 	/// );
@@ -746,12 +738,17 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( feature = "i18n" )]
 	pub fn to_string_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
-		self.as_units( units ).iter()
-			.filter( |( k, _ )| k > &0 )
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
+
+		if coll.is_empty() {
+			return format!( "0 {}", units_sorted[units_sorted.len() - 1].to_string_locale( locale ) );
+		}
+
+		coll.into_iter()
 			.map( |( k, v )| {
 				let name_unit = v.to_string_locale( locale );
-				let postfix = if *k == 1 {
-					name_unit[0..name_unit.len()-1].to_string()
+				let postfix = if k == 1 {
+					name_unit[0..name_unit.len() - 1].to_string()
 				} else {
 					name_unit
 				};
@@ -774,6 +771,7 @@ impl NormTimeDelta {
 	/// const GERMAN: LanguageIdentifier = langid!( "de-DE" );
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_latex_unit_locale( &[], &US_ENGLISH ), "90005000~seconds" );
 	/// assert_eq!( delta.to_latex_unit_locale( &[ Unit::Day ], &US_ENGLISH ), "900~normdays" );
 	/// assert_eq!(
 	///     delta.to_latex_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
@@ -795,6 +793,14 @@ impl NormTimeDelta {
 	///
 	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
 	/// assert_eq!(
+	///     delta_1.to_latex_unit_locale( &[ Unit::Day ], &US_ENGLISH ),
+	///     "0~normdays"
+	/// );
+	/// assert_eq!(
+	///     delta_1.to_latex_unit_locale( &[ Unit::Year, Unit::Day ], &US_ENGLISH ),
+	///     "0~normdays"
+	/// );
+	/// assert_eq!(
 	///     delta_1.to_latex_unit_locale( &[ Unit::Day, Unit::Hour ], &US_ENGLISH ),
 	///     "1~hour"
 	/// );
@@ -813,12 +819,17 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( all( feature = "i18n", feature = "tex" ) )]
 	pub fn to_latex_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
-		self.as_units( units ).iter()
-			.filter( |( k, _ )| k > &0 )
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
+
+		if coll.is_empty() {
+			return format!( "0~{}", units_sorted[units_sorted.len() - 1].to_string_locale( locale ) );
+		}
+
+		coll.into_iter()
 			.map( |( k, v )| {
 				let name_unit = v.to_string_locale( locale );
-				let postfix = if *k == 1 {
-					name_unit[0..name_unit.len()-1].to_string()
+				let postfix = if k == 1 {
+					name_unit[0..name_unit.len() - 1].to_string()
 				} else {
 					name_unit
 				};
@@ -836,6 +847,7 @@ impl NormTimeDelta {
 	/// use normtime::{NormTimeDelta, Unit};
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_string_sym_unit( &[] ), "90005000 s" );
 	/// assert_eq!( delta.to_string_sym_unit( &[ Unit::Day ] ), "900 d" );
 	/// assert_eq!( delta.to_string_sym_unit( &[ Unit::Day, Unit::Hour ] ), "900 d 1 h" );
 	/// assert_eq!(
@@ -844,6 +856,8 @@ impl NormTimeDelta {
 	/// );
 	///
 	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!( delta_1.to_string_sym_unit( &[ Unit::Day ] ), "0 d" );
+	/// assert_eq!( delta_1.to_string_sym_unit( &[ Unit::Year, Unit::Day ] ), "0 d" );
 	/// assert_eq!( delta_1.to_string_sym_unit( &[ Unit::Day, Unit::Hour ] ), "1 h" );
 	/// assert_eq!(
 	///     delta_1.to_string_sym_unit( &[ Unit::Day, Unit::Hour, Unit::Minute ] ),
@@ -851,8 +865,13 @@ impl NormTimeDelta {
 	/// );
 	/// ```
 	pub fn to_string_sym_unit( &self, units: &[Unit] ) -> String {
-		self.as_units( units ).iter()
-			.filter( |( k, _ )| k > &0 )
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
+
+		if coll.is_empty() {
+			return format!( "0 {}", units_sorted[units_sorted.len() - 1].to_string_sym() );
+		}
+
+		coll.into_iter()
 			.map( |( k, v )| format!( "{} {}", k, v.to_string_sym() ) )
 			.collect::<Vec<String>>()
 			.join( " " )
@@ -868,6 +887,7 @@ impl NormTimeDelta {
 	/// use normtime::{NormTimeDelta, Unit};
 	///
 	/// let delta = NormTimeDelta::new_seconds( 90_005_000 );
+	/// assert_eq!( delta.to_latex_sym_unit( &[] ), r"\qty{90005000}{\second}" );
 	/// assert_eq!(
 	///     delta.to_latex_sym_unit( &[ Unit::Day ] ),
 	///     r"\qty{900}{\normday}"
@@ -882,6 +902,8 @@ impl NormTimeDelta {
 	/// );
 	///
 	/// let delta_1 = NormTimeDelta::new_seconds( 5_000 );
+	/// assert_eq!( delta_1.to_latex_sym_unit( &[ Unit::Day ] ), r"\qty{0}{\normday}" );
+	/// assert_eq!( delta_1.to_latex_sym_unit( &[ Unit::Year, Unit::Day ] ), r"\qty{0}{\normday}" );
 	/// assert_eq!(
 	///     delta_1.to_latex_sym_unit( &[ Unit::Day, Unit::Hour ] ),
 	///     r"\qty{1}{\hour}"
@@ -893,8 +915,13 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_sym_unit( &self, units: &[Unit] ) -> String {
-		self.as_units( units ).iter()
-			.filter( |( k, _ )| k > &0 )
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
+
+		if coll.is_empty() {
+			return format!( r"\qty{{0}}{{{}}}", units_sorted[units_sorted.len() - 1].to_latex_sym( &TexOptions::new() ) );
+		}
+
+		coll.into_iter()
 			.map( |( k, v )| format!( r"\qty{{{}}}{{{}}}", k, v.to_latex_sym( &TexOptions::new() ) ) )
 			.collect::<Vec<String>>()
 			.join( "\\," )
