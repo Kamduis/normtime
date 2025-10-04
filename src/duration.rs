@@ -657,7 +657,7 @@ impl NormTimeDelta {
 	}
 
 	/// Provide units in ordered fashion.
-	fn to_string_intermediate( &self, units: &[Unit] ) -> ( Vec<( i64, Unit )>, Vec<Unit> ) {
+	fn breakdown_units_used( &self, units: &[Unit] ) -> ( Vec<( i64, Unit )>, Vec<Unit> ) {
 		// Second is standard unit is none is given.
 		let units_sorted = if units.is_empty() {
 			vec![ Unit::Second ]
@@ -738,9 +738,9 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( feature = "i18n" )]
 	pub fn to_string_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
-		let ( coll, units_sorted ) = self.to_string_intermediate( units );
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
 
-		if coll.len() == 0 {
+		if coll.is_empty() {
 			return format!( "0 {}", units_sorted[units_sorted.len() - 1].to_string_locale( locale ) );
 		}
 
@@ -819,9 +819,9 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( all( feature = "i18n", feature = "tex" ) )]
 	pub fn to_latex_unit_locale( &self, units: &[Unit], locale: &LanguageIdentifier ) -> String {
-		let ( coll, units_sorted ) = self.to_string_intermediate( units );
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
 
-		if coll.len() == 0 {
+		if coll.is_empty() {
 			return format!( "0~{}", units_sorted[units_sorted.len() - 1].to_string_locale( locale ) );
 		}
 
@@ -865,9 +865,9 @@ impl NormTimeDelta {
 	/// );
 	/// ```
 	pub fn to_string_sym_unit( &self, units: &[Unit] ) -> String {
-		let ( coll, units_sorted ) = self.to_string_intermediate( units );
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
 
-		if coll.len() == 0 {
+		if coll.is_empty() {
 			return format!( "0 {}", units_sorted[units_sorted.len() - 1].to_string_sym() );
 		}
 
@@ -915,9 +915,9 @@ impl NormTimeDelta {
 	/// ```
 	#[cfg( feature = "tex" )]
 	pub fn to_latex_sym_unit( &self, units: &[Unit] ) -> String {
-		let ( coll, units_sorted ) = self.to_string_intermediate( units );
+		let ( coll, units_sorted ) = self.breakdown_units_used( units );
 
-		if coll.len() == 0 {
+		if coll.is_empty() {
 			return format!( r"\qty{{0}}{{{}}}", units_sorted[units_sorted.len() - 1].to_latex_sym( &TexOptions::new() ) );
 		}
 
