@@ -1071,8 +1071,50 @@ impl Sub for NormTimeDelta {
 impl Mul<i32> for NormTimeDelta {
 	type Output = Self;
 
-	fn mul(self, rhs: i32) -> Self {
-		self.checked_mul(rhs).expect("Overflow in `NormTimeDelta * i32`")
+	fn mul( self, rhs: i32 ) -> Self {
+		self.checked_mul( rhs ).expect( "Overflow in `NormTimeDelta`" )
+	}
+}
+
+
+impl Mul<NormTimeDelta> for i32 {
+	type Output = NormTimeDelta;
+
+	fn mul( self, rhs: NormTimeDelta ) -> Self::Output {
+		rhs * self
+	}
+}
+
+
+impl Mul<f32> for NormTimeDelta {
+	type Output = Self;
+
+	fn mul( self, rhs: f32 ) -> Self {
+		let nanos_total = ( f64::from( self.nanos ) * f64::from( rhs ) ) as i64;
+
+		let secs_more = nanos_total.div_euclid( NANOS_PER_SEC as i64 );
+		let nanos = nanos_total.rem_euclid( NANOS_PER_SEC as i64 );
+
+		let secs_naive: f64 = self.secs as f64 * rhs as f64;
+		let secs: i128 = secs_naive as i128 + secs_more as i128;
+
+		if secs <= i64::MIN as i128 || secs >= i64::MAX as i128 {
+			panic!( "Overflow in `NormTimeDelta`" )
+		};
+
+		Self {
+			secs: secs as i64,
+			nanos: nanos as i32
+		}
+	}
+}
+
+
+impl Mul<NormTimeDelta> for f32 {
+	type Output = NormTimeDelta;
+
+	fn mul( self, rhs: NormTimeDelta ) -> Self::Output {
+		rhs * self
 	}
 }
 
@@ -1366,6 +1408,15 @@ mod tests {
 		// Unix-time zero.
 		assert_eq!( NormTimeDelta::new_seconds( 0 ), NormTimeDelta::ZERO );
 		assert_eq!( NormTimeDelta::new_days( 1 ).seconds(), DUR_NORMDAY );
+	}
+
+	#[test]
+	fn multiply_normtimedelta() {
+		assert_eq!( NormTimeDelta::new_seconds( 10 ) * 5, NormTimeDelta::new_seconds( 50 ) );
+		assert_eq!( NormTimeDelta::new_seconds( 10 ) * 0.5, NormTimeDelta::new_seconds( 5 ) );
+
+		assert_eq!( 5 * NormTimeDelta::new_seconds( 10 ), NormTimeDelta::new_seconds( 50 ) );
+		assert_eq!( 0.5 * NormTimeDelta::new_seconds( 10 ), NormTimeDelta::new_seconds( 5 ) );
 	}
 
 	#[test]
