@@ -218,22 +218,6 @@ impl LatexSym for Unit {
 
 
 //=============================================================================
-// Helper functions
-
-
-/// Returns the last digit of an unsigned integer number.
-fn last_digit( number: u64 ) -> u64 {
-	if number >= 10 {
-		last_digit( number / 10 );
-	}
-
-	number % 10
-}
-
-
-
-
-//=============================================================================
 // Duration
 
 /// Time duration with second precision.
